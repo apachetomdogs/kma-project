@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>블랙프라이데이 세일</title>
+    <!-- CSS 파일 링크 -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- JavaScript 파일 링크 -->
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <ul class="nav-menu">
+                <li><a href="#">베스트셀러</a></li>
+                <li><a href="#">별점 5점</a></li>
+                <li><a href="#">신상품</a></li>
+                <li><a href="#">카테고리</a></li>
+                <li class="search-bar">
+                    <input type="text" placeholder="검색어 입력">
+                    <button type="button">검색</button>
+                </li>
+                <li><a href="#">로그인&회원가입</a></li>
+                <li><a href="#">주문 & 계정</a></li>
+                <li><a href="#">고객센터</a></li>
+                <li><a href="#">장바구니</a></li>
+                <li><a href="#">마이페이지</a></li>
+            </ul>
+        </div>
+        <h1>블랙프라이데이 세일</h1>
+        <h2>BL%CK FRIDAY SALE WEEK</h2>
+        <p>단 5일, 특별한 세일을 마음껏 즐겨보세요!</p>
+        <div class="special-sale">
+            <div class="special-sale-column">
+            </div>
+            <div class="special-sale-column">
+                <p class="special-sale-desc">7월 22일 (월) ~ 7월 26일 (금) <br> 오전 11시 ~ 오후 7시</p>
+            </div>
+            <div class="special-sale-column">
+                <p class="special-sale-note">이벤트 기간 사용 가능한 무료배송 쿠폰(3,000원)과 할인 쿠폰(50%)이 발급됩니다.</p>
+            </div>
+        </div>
+    </header>
+    <main>
+        <div class="product-gallery">
+            <!-- 상품 아이템들 -->
+            <section class="product-item">
+                <button class="heart-button">
+                    <img src="images/heart.png" alt="찜하기">
+                </button>
+                <div class="product-img-container">
+                    <img src="images/truck.png" alt="트럭" class="product-img">
+                </div>
+                <p class="special-price">~UP TO 70% OFF</p>
+                <button class="btn">바로가기</button>
+            </section>
+
+            <section class="product-item">
+                <button class="heart-button">
+                    <img src="images/heart.png" alt="찜하기">
+                </button>
+                <div class="product-img-container">
+                    <img src="images/appliance4.jpg" alt="TV" class="product-img">
+                </div>
+                <p class="price">
+                    <span class="original-price">₩500,000</span> → <span class="discounted-price">₩249,000</span>
+                </p>
+                <button class="btn">구매하기</button>
+            </section>
+
+            <section class="product-item">
+                <button class="heart-button">
+                    <img src="images/heart.png" alt="찜하기">
+                </button>
+                <div class="product-img-container">
+                    <img src="images/washing.png" alt="세탁기" class="product-img">
+                </div>
+                <p class="price">
+                    <span class="original-price">₩500,000</span> → <span class="discounted-price">₩249,000</span>
+                </p>
+                <button class="btn">구매하기</button>
+            </section>
+
+            <section class="product-item">
+                <button class="heart-button">
+                    <img src="images/heart.png" alt="찜하기">
+                </button>
+                <div class="product-img-container">
+                    <img src="images/appliance3.jpg" alt="냉장고" class="product-img">
+                </div>
+                <p class="price">
+                    <span class="original-price">₩500,000</span> → <span class="discounted-price">₩249,000</span>
+                </p>
+                <button class="btn">구매하기</button>
+            </section>
+
+            <section class="product-item">
+                <button class="heart-button">
+                    <img src="images/heart.png" alt="찜하기">
+                </button>
+                <div class="product-img-container">
+                    <img src="images/appliance1.jpg" alt="전자레인지" class="product-img">
+                </div>
+                <p class="price">
+                    <span class="original-price">₩500,000</span> → <span class="discounted-price">₩249,000</span>
+                </p>
+                <button class="btn">구매하기</button>
+            </section>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2024 블랙프라이데이 세일</p>
+    </footer>
+
+    <!-- 팝업창 -->
+    <div class="popup" id="popup">
+        <div class="popup-content">
+            <span class="close" id="closePopup">&times;</span>
+            <p>매일 오전 11시 ~ 오후 7시, 다신 없을 빅세일!</p>
+        </div>
+    </div>
+</body>
+</html>
