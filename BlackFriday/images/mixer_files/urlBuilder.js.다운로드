@@ -1,0 +1,1 @@
+define(["jquery","common/utils/validationUtils","common/essentialData"],function($,validationUtils,data){var urlBuilder={buildRequestUrl:function(subUrl){var resourceDomain=data.getResourceDomain();if(validationUtils.isEmpty(resourceDomain))return subUrl;else if(validationUtils.isEmpty(subUrl))return resourceDomain;return resourceDomain+subUrl}};return urlBuilder});

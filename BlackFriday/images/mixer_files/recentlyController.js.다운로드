@@ -1,0 +1,301 @@
+define([
+	'jquery',
+    'common/template/urlBuilder',
+	'../common/utils/recently-utility',
+    'common/essentialData'
+],function ($, urlBuilder, utility, essentialData){
+        var apiUrl = essentialData.getDataFodiumWebUrl() || '//reco.coupang.com';
+        var abFlags = {};
+        var pageName = '';
+        var recentlyController = {
+            ui : {
+                cart: '.side-cart a',
+                item : '.recently-viewed-item',
+                recentlyViewedPage : '.recently-viewed-page',
+                prev : '.recentlyViewedBtn .prev',
+                next : '.recentlyViewedBtn .next',
+                pageNumber : '.pageNumber',
+                deleteItem : '.recently-delete'
+            },
+
+            init: function() {
+                pageName = recentlyController._getPageName();
+                utility.uiEnhancements.call(this);
+
+                this.ui.cart.on("click", function() {
+                    recentlyController._logWidgetClick({
+                        recentlyViewedWidgetClickType: 'cart',
+                        recentlyViewedWidgetCartCount: recentlyController._getCartCount()
+                    });
+                })
+                this.ui.prev.on("click", $.proxy(this._movePrev,this));    // 이전리스트로 이동
+                this.ui.next.on("click", $.proxy(this._moveNext,this));    // 다음리스트로 이동
+
+
+                if (this.ui.recentlyViewedPage.length) {
+                    this.ui.recentlyViewedPage.eq(0).show();
+                    $.ajax({
+                        type:'GET',
+                        url: apiUrl + '/api/v2/viewed-products?page=0',
+                        dataType:'jsonp',
+                        xhrFields: {
+                            withCredentials: true
+                        },
+                        success:function(data){
+                            recentlyController._updateAbFlags(data);
+                            recentlyController._render(data.data);
+                            recentlyController._logWidgetImpression();
+                        },
+                        error:function(){
+                            data = {
+                                totalElements : 0,
+                                numberOfElements : 0
+                            }
+                            recentlyController._updateAbFlags(data);
+                            recentlyController._render(data);
+                            recentlyController._logWidgetImpression();
+                        }
+                    })
+                }
+
+            },
+
+            _render: function(data){
+                var element = data.content,
+                    totalpages = data.totalPages,
+                    numberOfElements = data.numberOfElements,
+                    totalElements = data.totalElements,
+                    pageNumber = data.number + 1,
+                    $totalCnt = $('.total-element'),
+                    $totalPages = $('.total-pages'),
+                    $btnArea = $('.recentlyViewedBtn'),
+                    $page = $('.recent-viewed-paging'),
+                    recentlyViewedItem = '.recently-viewed-item',
+                    recentlyDelete = '.recently-delete',
+                    listhtml = '';
+
+                $totalCnt.empty().text(totalElements);
+                if (pageNumber > 0) {
+                    $page.show();
+                }
+
+                if (numberOfElements > 0) {
+                    for (var i = 0; i < numberOfElements; i++) {
+                        var title = element[i].title,
+                            id = element[i].productId,
+                            link = element[i].link,
+                            salesPrice = element[i].salesPrice,
+                            src = element[i].thumbnailUrl;
+
+
+                        this.ui.recentlyViewedPage.empty();
+
+                        var liPropInsert = '';
+                        if (abFlags['recentlyViewedItemWeblogABFlags'] === 'B') {
+                            liPropInsert = ' data-product-id="' +id+ '"';
+                        }
+                        listhtml += '\
+                            <li class="recently-viewed-item"' + liPropInsert + '>\
+                                <a href="' + (this.ui.recentlyViewedPage.data("href") + link) + '?sourceType=recently_viewed_widget' + '" class="view-item" data-coulog="{"logCategory":"event", "logType":"click", "logLabel":"recently_item_"' + i + '"","grp":"sideBar_recentlyItem"}">\
+                                    <img src="' + src + '" class="thumbnail" alt="" />\
+                                    <span class="name">' + title + '</span>\
+                                    <span class="price"><em class="sales-price">' + utility.price.addComma(salesPrice) + '</em>원</span>\
+                                </a>\
+                                <a href="삭제" class="recently-delete" title="' + Pacifik.formatMessage("coupang.web.94b7db", "닫기") + '" data-productid="' + id + '"></a>\
+                            </li>\
+                        ';
+                        this.ui.recentlyViewedPage.html(listhtml);
+
+                        $(recentlyViewedItem).hover(function () {
+                            $(this).addClass('over');
+                            if (abFlags['recentlyViewedItemWeblogABFlags'] !== 'B') return;
+                            var $id = $(this).data('productId');
+                            recentlyController._logWidgetItemHoverImpression($id);
+                        }, function () {
+                            $(this).removeClass('over');
+                        });
+                        $(recentlyViewedItem).on("click", function(e) {
+                            if (abFlags['recentlyViewedItemWeblogABFlags'] !== 'B') return;
+                            var $id = $(this).data('productId');
+                            recentlyController._logWidgetClick({
+                                recentlyViewedWidgetClickType: 'item',
+                                productId: $id
+                            });
+                        });
+
+                        $(recentlyDelete).on('click', function (e) {
+                            e.preventDefault();
+                            var $id = $(this).data('productid');
+                            if (abFlags['recentlyViewedItemWeblogABFlags'] === 'B') {
+                                e.stopPropagation();
+                                recentlyController._logWidgetClick({
+                                    recentlyViewedWidgetClickType: 'item_close',
+                                    productId: $id
+                                });
+                            }
+                            $.ajax({
+                                type: 'GET',
+                                url: apiUrl + '/api/v2/viewed-products/' + $id + '/delete?count=' + totalElements + '&page=' + (pageNumber-1),
+                                dataType: 'jsonp',
+                                xhrFields: {
+                                    withCredentials: true
+                                },
+                                success: function (data) {
+                                    recentlyController._render(data.data);
+                                },
+                                error: function (data) {
+                                    alert(Pacifik.formatMessage('coupang.web.ff1379', '삭제가 안됐나요? 다시 한번 해보세요.'));
+                                }
+                            })
+                        })
+                    }
+
+                    this.ui.pageNumber.empty().text(pageNumber);
+                    $totalPages.text(totalpages);
+                    if ($totalPages.text() == 1) {
+                        $btnArea.hide();
+                    }
+                    else {
+                        $btnArea.show();
+                    }
+                }
+                else {
+                    this.ui.recentlyViewedPage.html('<li class="no-item">' + Pacifik.formatMessage('coupang.web.52624c', '최근본 상품이') + '<br/>' + Pacifik.formatMessage('coupang.web.7779d6', '없습니다.') + '</li>');
+                    $page.hide();
+                }
+
+            },
+
+            _movePrev: function(e) {
+                e.preventDefault();
+                var page = parseInt(this.ui.pageNumber.text())-1,
+                    $totalPages = $('.total-pages');
+
+                if (page < 1) {
+                    page = $totalPages.text();
+                }
+                recentlyController._logWidgetClick({
+                    recentlyViewedWidgetClickType: 'previous_page'
+                });
+                recentlyController.renderRecently(page-1);
+            },
+            _moveNext: function(e) {
+                e.preventDefault();
+                var page = parseInt(this.ui.pageNumber.text())+1,
+                    $totalPages = $('.total-pages');
+
+                if (page > $totalPages.text()) {
+                    page = 1;
+                }
+                recentlyController._logWidgetClick({
+                    recentlyViewedWidgetClickType: 'next_page'
+                });
+                recentlyController.renderRecently(page-1);
+            },
+            _logWidgetImpression: function() {
+                if (abFlags['recentlyViewedItemWeblogABFlags'] !== 'B') return;
+                if (!window.CoupangWebLog) return;
+                CoupangWebLog.submit({
+                    meta: {
+                        schemaId: 12734,
+                        schemaVersion: 1
+                    },
+                    data: {
+                        pageName: pageName,
+                        domain: pageName,
+                        logType: 'impression',
+                        logCategory: 'impression',
+                        eventName: 'recentlyviewed_widget_impression'
+                    }
+                });
+            },
+            _logWidgetItemHoverImpression: function(productId) {
+                if (abFlags['recentlyViewedItemWeblogABFlags'] !== 'B') return;
+                if (!window.CoupangWebLog) return;
+                CoupangWebLog.submit({
+                    meta: {
+                        schemaId: 12736,
+                        schemaVersion: 1
+                    },
+                    data: {
+                        pageName: pageName,
+                        domain: pageName,
+                        logType: 'impression',
+                        logCategory: 'impression',
+                        eventName: 'recentlyviewed_widget_item_hover_impression',
+                        productId: productId
+                    }
+                });
+            },
+            _logWidgetClick: function(data) {
+                if (abFlags['recentlyViewedItemWeblogABFlags'] !== 'B') return;
+                if (!data) return;
+                if (!window.CoupangWebLog) return;
+                CoupangWebLog.submit({
+                    meta: {
+                        schemaId: 12735,
+                        schemaVersion: 2
+                    },
+                    data: {
+                        pageName: pageName,
+                        domain: pageName,
+                        logType: 'click',
+                        logCategory: 'event',
+                        eventName: 'recentlyviewed_widget_click',
+                        recentlyViewedWidgetClickType: data.recentlyViewedWidgetClickType,
+                        productId: data.productId,
+                        recentlyViewedWidgetCartCount: data.recentlyViewedWidgetCartCount,
+                        sourceType:'recently_viewed_widget',
+                    }
+                });
+            },
+            _getCartCount: function() {
+                var result = 0;
+                try {
+                    var countStr = $(".cart-count").eq(0).text();
+                    result = parseInt(countStr, 10);
+                } catch (error) {}
+                return result;
+            },
+            _updateAbFlags: function(data) {
+                var setObj = {};
+                if (data && data.abFlags) {
+                    setObj = data.abFlags;
+                }
+                abFlags = setObj;
+            },
+            _getPageName: function() {
+                try {
+                    // coupang.com
+                    if (window.JsLogPageName) {
+                        return window.JsLogPageName;
+                    }
+                    // mc.coupang.com
+                    if (window.location.href.host === 'mc.coupang.com') {
+                        return window.__NEXT_DATA__.props.pageProps.ui.page.pageName;
+                    }
+                } catch (error) {}
+                return '';
+            },
+            renderRecently : function(page) {
+                $.ajax({
+                    type:'GET',
+                    url:apiUrl + '/api/v2/viewed-products?page='+page,
+                    dataType:'jsonp',
+                    xhrFields: {
+                        withCredentials: true
+                    },
+                    success:function(data){
+                        recentlyController._updateAbFlags(data);
+                        recentlyController._render(data.data);
+                    },
+                    error:function(data){
+                        recentlyController._updateAbFlags(data);
+                        alert(Pacifik.formatMessage('coupang.web.2d47c8', '다시 시도해 주세요.'));
+                    }
+                })
+            }
+        };
+
+        return recentlyController;
+    });

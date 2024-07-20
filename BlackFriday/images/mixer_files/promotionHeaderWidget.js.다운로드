@@ -1,0 +1,124 @@
+define([
+    "jquery",
+    "common/utils/cookieUtils",
+    "common/template/urlBuilder",
+    "handlebars",
+], function ($, cookieUtil, urlBuilder, Handlebars) {
+    "use strict";
+    var promotionHeaderWidgetTemplate = [
+        '<li class="promotion-header">',
+        '    {{#if topBar.leftImageUrl}}<img src="{{topBar.leftImageUrl}}" class="promotion-header-avatar" />{{/if}}',
+        // '    <span class="promotion-header-text">{{topBar.text1}} </span>',
+        '    <span class="promotion-header-text bold">{{topBar.text2}}</span>',
+        // '    <img class="promotion-header-img" src="{{topBar.rightImageUrl}}">',
+        '    <span class="triangle-down"></span>',
+        '    <img class="promotion-header-popup-img" src="{{expandedArea.banner.imageUrl}}" />',
+        "</li>",
+    ].join("");
+    var memberSrl = cookieUtil.getValue("member_srl");
+    var PCID = cookieUtil.getValue("PCID")
+    // var cacheKey = (memberSrl || "") + "promition-header-v3";
+    var cacheKey = (memberSrl ? 'l' : 'n') + "-promition-header-v3";
+    var $container = $("#headerMenu");
+    // global ff for PEUI-1633 & PEUI-1625, uses same key 'PEUI-1633'
+    var jsErrorApr = window.globalFF && window.globalFF.enable("PEUI-1633");
+    // root casue: 
+    // 1. localStorage is null: localStorage may be null when ssr, because this js file will immediately run when ssr rendering.
+    // 2. when user forbiden the data of local storing, exception will happen.
+    // solution: add try catch block to let the logic fall back to request api '//www.coupang.com/np/promotion/header'
+
+    function getLocalData(cacheKey) {
+        if (jsErrorApr) {
+            try {
+                return localStorage.getItem(cacheKey);
+            } catch (error) {
+                return null;
+            }
+        } else {
+            return localStorage.getItem(cacheKey);
+        }
+    }
+
+    function setLocalData(cacheKey, data) {
+        if (jsErrorApr) {
+            try {
+                localStorage.setItem(
+                    cacheKey,
+                    JSON.stringify({
+                        data: data || {},
+                        expire: Date.now(),
+                    })
+                );
+            } catch (error) {
+            }
+        } else {
+            localStorage.setItem(
+                cacheKey,
+                JSON.stringify({
+                    data: data || {},
+                    expire: Date.now(),
+                })
+            );
+        }
+    }
+
+    var localData = getLocalData(cacheKey);
+
+    if (!$container.length) {
+        return;
+    }
+
+    try {
+        localData = JSON.parse(localData);
+        // expire after 1h
+        if (Date.now() - localData.expire > 1 * 60 * 60 * 1000) {
+            localData = null;
+            localStorage.removeItem(cacheKey);
+        }
+    } catch (e) {
+        localData = null;
+    }
+
+    if (!localData) {
+        $.ajax({
+            url: "//www.coupang.com/np/promotion/header",
+            data: {
+                pcid: PCID,
+                memberSrl: memberSrl,
+            },
+            type: "GET",
+            dataType: "jsonp",
+        }).then(function (data) {
+            setLocalData(cacheKey, data);
+            init(data);
+        });
+    } else {
+        init(localData.data);
+    }
+
+    function init(data) {
+        if (!data || !data.topBar) {
+            return;
+        }
+
+        var template = Handlebars.compile(promotionHeaderWidgetTemplate);
+        var $menu = $(template(data));
+        var $imgPopup = $menu.find(".promotion-header-popup-img");
+
+        $menu
+            .on("mouseenter", function (e) {
+                $imgPopup.show();
+            })
+            .on("mouseleave", function (e) {
+                $imgPopup.hide();
+            });
+
+        $container.prepend($menu);
+
+        $imgPopup.css({
+            left: -(data.expandedArea.banner.width / 2 - $menu.width() + 12) / 2,
+            top: "36px",
+            width: data.expandedArea.banner.width / 2 + "px",
+        });
+    }
+});

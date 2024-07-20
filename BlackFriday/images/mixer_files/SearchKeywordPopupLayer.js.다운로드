@@ -1,0 +1,380 @@
+define([
+    'jquery'
+    , 'common/template/urlBuilder'
+    , 'common/utils/validationUtils'
+    , 'common/reporter/queryStringAppender'
+    , 'common/reporter/gaToWiseLogMaker'
+    , 'common/utils/cookieUtils'
+    , 'common/essentialData'
+    , 'search/searchWebLogSchemas'
+    , 'search/utils/weblogUtils-min'
+], function($, urlBuilder, validationUtils, queryStringAppender, gaToWiseLogMaker, cookie, essentialData, searchWebLogSchemas, weblogUtils){
+
+    /**
+     * 인기 검색어, 자동완성
+     */
+    var TTI_DATA = [],
+        MAX_TTI_LOGGING_SIZE = 10;
+
+    var LOG_PARAMS = searchWebLogSchemas && searchWebLogSchemas.LOG_PARAMS || {};
+
+    var SearchKeywordPopupLayer = function (targetInfo){
+        this.$searchForm = $(targetInfo.searchForm);
+        this.$popupLayer = $(targetInfo.popupLayerElement);
+        this.$inputTarget = $(targetInfo.inputTarget);
+        this.$searchChannel = this.$searchForm.find("input[name='channel']");
+        this.$subminBtn = $(targetInfo.submitBtn);
+        this.preSearchKeyword = '';
+        this.onRequest = false;
+        // Init
+        this.init();
+    };
+
+    SearchKeywordPopupLayer.prototype = {
+        init : function (){
+            this.bindEvent();
+        }
+        , bindEvent : function (){
+            var _this = this;
+            this.$popupLayer.on('mousedown keydown', '[data-channel]', function (e){
+                var $this = $(this);
+                if(cookie.getValue('search-history') != "OFF"){
+                    cookie.addCookie('searchKeyword', $this.data('searchkeyword'), '|', {timeValue : 10});
+                    var searchKeywordType = {};
+                    searchKeywordType[$this.data('searchkeyword')] = $this.data('travel') & 1;
+                    cookie.addCookie('searchKeywordType', JSON.stringify(searchKeywordType), '|', {timeValue : 10});
+                }
+                if(e.keyCode === 13 || e.keyCode === 108){
+                    window.location.href = _this.buildSearchKeywordUrlWithChannel(encodeURIComponent($this.data('searchkeyword')), $this.data('channel'), $this.data('travel'));
+                }
+            });
+            this.$popupLayer.on('mousedown', '[data-channel]', function (e){
+                var $this = $(this);
+                if(cookie.getValue('search-history') != "OFF"){
+                    cookie.addCookie('searchKeyword', $this.data('searchkeyword'), '|', {timeValue : 10});
+                    var searchKeywordType = {};
+                    searchKeywordType[$this.data('searchkeyword')] = $this.data('travel') & 1;
+                    cookie.addCookie('searchKeywordType', JSON.stringify(searchKeywordType), '|', {timeValue : 10});
+                }
+                window.location.href = _this.buildSearchKeywordUrlWithChannel(encodeURIComponent($this.data('searchkeyword')), $this.data('channel'), $this.data('travel'));
+            });
+
+            this.$popupLayer.on('mouseenter focusin', '[data-channel]', function (e){
+                //FIXME
+                $(this).addClass('sect');
+            });
+            this.$popupLayer.on('mouseleave focusout', '[data-channel]', function (e){
+                //FIXME
+                $(this).removeClass('sect');
+            });
+            this.firedSearchKeywordHistoryEvent();
+        }
+        , upKeyButtonInPopupLayerEvent : function (){
+            var keywordElements = this.$popupLayer.find('[data-channel]')
+            var totalCount = keywordElements.length;
+            if(totalCount < 1){
+                return;
+            }
+            var selectedIndex = keywordElements.index(this.$popupLayer.find('.sect'));
+            keywordElements.removeClass('sect');
+            if(selectedIndex <= 0){
+                this.$inputTarget.val(this.getPreSearchKeyword());
+                this.$searchChannel.val('user')
+            } else {
+                var selectElement = keywordElements.eq((selectedIndex - 1));
+                selectElement.addClass('sect');
+                this.$inputTarget.val(selectElement.data('searchkeyword'));
+                this.$searchChannel.val(selectElement.data('channel'));
+                this.$searchChannel.data("rank", selectedIndex + 1);
+                this.$searchChannel.data("prefix", this.getPreSearchKeyword());
+            }
+        }
+        , downKeyButtonInPopupLayerEvent : function (){
+            var keywordElements = this.$popupLayer.find('[data-channel]');
+            var totalCount = keywordElements.length;
+            if(totalCount < 1){
+                return;
+            }
+            var selectedIndex = keywordElements.index(this.$popupLayer.find('.sect'));
+            if(selectedIndex < (totalCount - 1)){
+                keywordElements.removeClass('sect');
+                var selectElement = keywordElements.eq((selectedIndex + 1));
+                selectElement.addClass('sect');
+                this.$inputTarget.val(selectElement.data('searchkeyword'));
+                this.$searchChannel.val(selectElement.data('channel'));
+                this.$searchChannel.data("rank", selectedIndex + 1);
+                this.$searchChannel.data("prefix", this.getPreSearchKeyword());
+            }
+        }
+        , closePopupSearchKeyword : function (){
+            this.onRequest = false;
+            this.$popupLayer.hide();
+            this.$popupLayer.next().hide();
+        }
+        , setPreSearchKeyword : function (keyword){
+            this.preSearchKeyword = keyword;
+        }
+        , getPreSearchKeyword : function (){
+            return this.preSearchKeyword;
+        }
+        , renderingSearchKeywordHistory : function (){
+            var _this = this;
+            var $historyOnOffBtn = $('.history-onoff');
+            var searchKeywords = cookie.getValue('searchKeyword');
+            var searchKeywordTypes = cookie.getValue('searchKeywordType') ? '[' + cookie.getValue('searchKeywordType') + ']' : '[]';
+            this.$popupLayer.removeClass('auto-search');
+            if(cookie.getValue('search-history') == "OFF"){
+                //    검색어 저장 기능이 꺼져있다는 멘트 & 최근검색어 켜기로 바꿈
+                _this.$popupLayer.html(_this.buildSearchKeywordHistoryLayerOffHtml());
+                $historyOnOffBtn.removeClass('on').addClass('off').text(Pacifik.formatMessage('coupang.web.2bdfeb', '최근검색어켜기'));
+                _this.$popupLayer.show();
+                _this.$popupLayer.next().addClass('fixTop');
+                _this.$popupLayer.next().show();
+            }else if (!!searchKeywords) {
+                var keywordArr = searchKeywords.split('|');
+                var keywordTypeArr = {};
+                try {
+                    keywordTypeArr = JSON.parse(searchKeywordTypes.replace(/\|/g, ','));
+                } catch (e) {
+                }
+                _this.$popupLayer.html(_this.buildSearchKeywordHistoryLayerHtml(keywordArr, keywordTypeArr));
+                $('.autocomplete_wrap ol li').eq(0).find('a').trigger('mouseenter');
+                $historyOnOffBtn.removeClass('off').addClass('on').text(Pacifik.formatMessage('coupang.web.c8917d', '최근검색어끄기'));
+                _this.$popupLayer.show();
+                _this.$popupLayer.next().removeClass('fixTop');
+                _this.$popupLayer.next().show();
+
+                _this.bindClickLogEventHandler();
+            } else {
+                //버튼도 숨겨야
+                _this.$popupLayer.hide();
+                _this.$popupLayer.next().hide();
+                _this.$popupLayer.html('');
+            }
+        }
+        , firedSearchKeywordHistoryEvent : function(){
+            var _this = this;
+            //    최근 검색어
+            this.$popupLayer.on('mouseenter focusin', '.delete-kwdhistory', function(e){
+                e.preventDefault();
+                $(this).addClass('select-btn');
+            });
+            this.$popupLayer.on('mouseleave focusout', '.delete-kwdhistory', function(e){
+                e.preventDefault();
+                $(this).removeClass('select-btn');
+            });
+            //    최근 검색어 삭제관련 버튼
+            $('.search-form').on('click', '.del-button', function(e){
+                e.preventDefault();
+                var $this = $(e.target);
+                if($this.hasClass('delete-all-kwdhistory')){
+                    //    전체삭제.
+                    cookie.erase('searchKeyword');
+                    $('#headerPopupWords, .history-btns').hide();
+                }else{
+                    //    target삭제. 창이 계속 열려있어야 함
+                    cookie.substractCookie('searchKeyword', $this.data('searchkeyword'), '|', {timeValue : 10});
+                    $this.parent().remove();
+                }
+            });
+            $('.search-form').on('click', '.history-onoff', function(e){
+                e.preventDefault();
+                if($(e.currentTarget).hasClass('on')){
+                    cookie.setCookie('search-history', 'OFF', {timeUnit: 'DAY', timeValue : 365});
+                    setTimeout(function() {
+                        _this.renderingSearchKeywordHistory();
+                    }, 200);
+                }else{
+                    cookie.setCookie('search-history', 'ON', {timeUnit: 'DAY', timeValue : 365});
+                    setTimeout(function() {
+                        _this.renderingSearchKeywordHistory();
+                    }, 200);
+                }
+            });
+        }
+        , buildSearchKeywordHistoryLayerOffHtml : function(){
+            var html = '<div class="autocomplete_wrap"><span class="history-off-msg">' + Pacifik.formatMessage('coupang.web.f3dc4f', '최근 검색어 저장 기능이 꺼져 있습니다.') + '</span>';
+
+            html += '</div>';
+            return html;
+        }
+        , buildSearchKeywordHistoryLayerHtml : function (keywordArr, keywordTypeArr){
+            var _this = this;
+            var MAX_KEYWORD_NUMBER = 9;
+            keywordArr.reverse();
+            keywordTypeArr.reverse();
+            var keywordLength = keywordArr.length > MAX_KEYWORD_NUMBER ? MAX_KEYWORD_NUMBER: keywordArr.length;
+            var listHtml = '';
+            for (var i = 0; i < keywordLength; i++) {
+                var travelKeyword = _this.isTravelKeyword(keywordArr[i], keywordTypeArr);
+
+                listHtml += '\
+                    <li>\
+                        <a href="javascript:;" class="kwd"\
+                            data-channel="recent"\
+                            data-searchkeyword="' + keywordArr[i] + '"\
+                            data-travel="' + travelKeyword + '"\
+                            data-coulog="{"customURL": "/click_search_recent_keyword", "logCategory":"event", "logType":"click", "logLabel":"SRP", "q":"' + keywordArr[i] + '"}"\
+                        >\
+                        ' + keywordArr[i] + '\
+                        </a>\
+                        <span data-searchkeyword="' + keywordArr[i] + '" class="delete-kwdhistory del-button">' + Pacifik.formatMessage("coupang.web.fc81e2", "삭제") + '</span>\
+                    </li>\
+                ';
+            }
+
+            return '\
+                <div class="autocomplete_wrap">\
+                    <h3><span>' + Pacifik.formatMessage("coupang.web.8124e8", "최근") + '</span> ' + Pacifik.formatMessage("coupang.web.fd74f0", "검색어") + '</h3>\
+                    <ol>' + listHtml + '</ol>\
+                </div>\
+            ';
+        }
+        , isTravelKeyword: function (keyword, keywordTypeArr) {
+            for (var i = 0; i < keywordTypeArr.length; i++) {
+                if (keywordTypeArr[i][keyword]) {
+                    return true;
+                }
+            }
+            return false;
+          }
+        , renderingAutoCompleteSearchKeyword : function (){
+            this.onRequest = true;
+            var _this = this;
+            var keyword = $.trim(this.$inputTarget.val());
+            var startTime = new Date().getTime();
+
+            if(!keyword) return;
+
+            $.ajax({
+                url : urlBuilder.buildRequestUrl('/np/search/autoComplete'),
+                // url : 'http://www.coupang.com/np/search/autoComplete',
+                data : {keyword : keyword},
+                cache : false,
+                dataType : 'jsonp',
+                jsonp : 'callback',
+                success : function(response) {
+                    if(_this.onRequest == false){
+                        return;
+                    }
+                    // suggestKeyword
+                    if (validationUtils.isNotEmpty(response)) {
+                        var documentFragment = $(document.createDocumentFragment());
+                        documentFragment.append(_this.buildAutoCompleteSearchKeywordPopupLayerHtml(response));
+                        _this.$popupLayer.html(documentFragment);
+                        _this.$popupLayer.show();
+
+                        _this.bindClickLogEventHandler();
+
+                        _this.updateTTIData(new Date().getTime() - startTime);
+                    } else {
+                        _this.$popupLayer.hide();
+                        _this.$popupLayer.html('');
+                    }
+                },
+                error: function() {
+                    _this.$popupLayer.hide();
+                    _this.$popupLayer.html('');
+                }
+            });
+            $('.history-btns').hide();
+            this.$popupLayer.addClass('auto-search');
+        }
+        , buildAutoCompleteSearchKeywordPopupLayerHtml : function (keywords){
+            var keyword = this.$inputTarget.val();
+            var MAX_KEYWORD_COUNT = 11;
+            var keywordLength = keywords.length > MAX_KEYWORD_COUNT ? MAX_KEYWORD_COUNT: keywords.length;
+
+            var listHtml = '<div class=\"autocomplete_wrap\">';
+            for (var i = 0; i < keywordLength; i++) {
+                if (validationUtils.isNotEmpty($.trim(keywords[i]))) {
+                    listHtml += '<a href="javascript:;"';
+                    listHtml += ' data-channel="auto" data-searchkeyword="' + keywords[i].keyword + '"';
+                    listHtml += ' data-travel="' + keywords[i]['travelKeyword'] + '"';
+                    listHtml += ' data-requestid="' + keywords[i]['requestId'] + '"';
+                    listHtml += ' data-coulog=\'{"customURL": "/click_search_autocomplete_keyword", "logCategory":"event", "logType":"click", "logLabel":"SRP", "rank":"' + i + '", "prefix":"' + keyword + '", "q":"' + keywords[i].keyword + '"}\'>';
+                    listHtml += keywords[i].keyword.replace(keyword, '<strong>' + keyword + '</strong>') + '</a>';
+                }
+            }
+            listHtml += '</div>';
+            return listHtml;
+        }
+        , buildSearchKeywordUrlWithChannel : function (keyword, channel, isTravelKeyword){
+            var queryString = 'q=' + keyword;
+            var componentId = $("#searchCategories").children("option").filter(":selected").data("category-id");
+
+            if (validationUtils.isNotEmpty(channel)){
+                queryString += '&channel=' + channel;
+            }
+
+            if (validationUtils.isNotEmpty(componentId)) {
+                queryString += '&component=' + componentId;
+            }
+
+            //queryString += '&' + gaToWiseLogMaker.buildGAParameter(this.$subminBtn);
+            // GA to Wise log 로직 추가
+            return (!componentId || componentId === 90918 ) && isTravelKeyword  // (none category or domestic travel category component) and travel keyword query.
+                ? queryStringAppender.getUrlWithQueryStringDelimiter(essentialData.getWebDomain() + '/np/travel/search/decision', queryString)
+                : queryStringAppender.getUrlWithQueryStringDelimiter(this.$searchForm.data('actionurl'), queryString);
+        },
+        updateTTIData: function(tti) {
+            TTI_DATA.push(tti);
+
+            (TTI_DATA.length >= MAX_TTI_LOGGING_SIZE) && this.putTTILogger();
+        },
+        putTTILogger: function() {
+            var sum = 0;
+
+            for(var i in TTI_DATA) {
+                sum += parseFloat(TTI_DATA[i]) || 0;
+            }
+
+            // to override tti data
+            if(window["tti"] && sum > 0) {
+                window["tti"]["label"] = "SRP_AUTOCOMPLETE";
+                window["tti"]["getTTI"] = function() { return sum / MAX_TTI_LOGGING_SIZE; };
+                window["tti"]["logTTI"] && window["tti"]["logTTI"]();
+
+                TTI_DATA = []; // reset tti data
+            }
+
+            // to send lumberjack auto_complete tti log
+            if (window.CoupangWebLog && sum > 0) {
+                var weblog = {};
+                $.extend(true, weblog, LOG_PARAMS.SRP_AUTOCOMPLETE_TTI);
+                $.extend(weblog.data, {tti: Math.floor(sum / MAX_TTI_LOGGING_SIZE)});
+                weblogUtils.sendLog(weblog);
+
+                TTI_DATA = []; // reset tti data
+            }
+        },
+        bindClickLogEventHandler: function () {
+            $('.autocomplete_wrap a').on('click', function () {
+                var data = $(this).data() || {};
+                var channel = data.channel;
+                var logData = data.coulog;
+                var requestId = data.requestid;
+
+                if (!channel || !logData) {
+                    return;
+                }
+
+                var weblog = {};
+
+                if (channel === 'auto') {
+                    $.extend(true, weblog, LOG_PARAMS.SRP_AUTOCOMPLETE_CLICK);
+                    $.extend(weblog.data, {prefix: logData.prefix, rank: parseInt(logData.rank) || 0, q: logData.q, requestId: requestId});
+                } else if (channel === 'recent') {
+                    $.extend(true, weblog, LOG_PARAMS.SRP_HISTORY_CLICK);
+                    $.extend(weblog.data, {q: logData.q});
+                } else {
+                    // user
+                    $.extend(true, weblog, LOG_PARAMS.SRP_SEARCH_BUTTON_CLICK_V4);
+                    $.extend(weblog.data, {q: logData.q});
+                }
+                weblogUtils.sendLog(weblog);
+            });
+        }
+    };
+    return SearchKeywordPopupLayer;
+});

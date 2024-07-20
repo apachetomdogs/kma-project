@@ -1,0 +1,204 @@
+define([
+    'jquery',
+    'handlebars',
+    './convertBudLogger',
+    './iframe/iframePopup'
+], function ($, Handlebars, logger, IframePopup){
+    var loyaltyPopup = null;
+    var loyaltyPopupResetFunc = null;
+    var topBarHeight = $('article.top-bar').outerHeight() || 0;
+
+    function getBUDComponent(isTypeBCD, freeShippingCount, nudgeButtonMessage) {
+        var templateBCD = '\
+        <hr class="vertical-divider">\
+        <li id="freeShippingBenefitMenu">\
+            <span class="badge red">{{formatMessage "coupang.web.10c1a7" default="이벤트 종료"}}</span>\
+            <span>\
+                {{formatMessage "coupang.web.84ff87" default="내가 받은"}} <strong>{{formatMessage "coupang.web.b1522b" default="무조건 무료배송"}}</strong> {{formatMessage "coupang.web.0eab71" default="혜택"}}\
+                <strong>{{formatMessage "coupang.web.5a849f" default="총"}} {{freeShippingCount}}{{formatMessage "coupang.web.0ef6c0" default="회"}}</strong><span><a class="link-loyalty"><span class="membershipNudgeMessage">{{nudgeButtonMessage}}<img src="{{cdnImageUrl "//img1a.coupangcdn.com/image/coupang/icon/web/right-arrow-white.png"}}" alt="arrow"></span></a></span>\
+            </span>\
+        </li>\
+        <hr class="vertical-divider mr12">';
+
+        var templateEFG = '\
+        <hr class="vertical-divider">\
+        <li id="freeShippingBenefitMenu">\
+            <span class="badge">{{formatMessage "coupang.web.10c1a7" default="이벤트 종료"}}</span>\
+            <span>\
+                {{formatMessage "coupang.web.84ff87" default="내가 받은"}} <strong class="green">{{formatMessage "coupang.web.b1522b" default="무조건 무료배송"}}</strong> {{formatMessage "coupang.web.0eab71" default="혜택"}}\
+                <strong>{{formatMessage "coupang.web.5a849f" default="총"}} {{freeShippingCount}}{{formatMessage "coupang.web.0ef6c0" default="회"}}</strong>\
+                <span class="triangle-down"></span>\
+            </span>\
+            <div class="mouseOverPopup mouseover-popup dn">\
+                <div class="info">{{formatMessage "coupang.web.012e65" default="이벤트가 종료되었습니다!"}}</div>\
+                <div class="desc">{{formatMessage "coupang.web.71a6ff" default="19,800원 미만 로켓배송 상품을"}} <span class="dark"><b>{{freeShippingCount}}{{formatMessage "coupang.web.0ef6c0" default="회"}}</b> {{formatMessage "coupang.web.a54e12" default="주문했어요"}}</span></div>\
+                <a class="link-loyalty big">\
+                    <span class="membershipNudgeMessage">{{nudgeButtonMessage}}<img src="{{cdnImageUrl "//img1a.coupangcdn.com/image/coupang/icon/web/right-arrow-white@2x.png"}}" alt="arrow"></span></a>\
+                </a>\
+            </div>\
+        </li>\
+        <hr class="vertical-divider mr12">';
+
+        var template = isTypeBCD ? templateBCD : templateEFG;
+        return Handlebars.compile(template)({
+            freeShippingCount: freeShippingCount,
+            nudgeButtonMessage: nudgeButtonMessage
+        });
+    }
+
+    function getDomain() {
+        var hostname = (location.hostname || '').split('.')[0];
+        if (hostname === 'www') {
+            var sectionType = ($('input#sectionType').val() || '').toLowerCase();
+            switch (sectionType) {
+                case 'home':
+                    return 'home';
+                case 'list':
+                    return 'plp';
+                case 'search':
+                    return 'srp';
+                case 'product':
+                    return 'sdp';
+            }
+        }
+        if (hostname === 'mclab-stage' || hostname === 'mc' || hostname === 'my') {
+            return 'MyCoupang';
+        }
+        return '';
+    }
+
+    function applyConvertBUD(convertBUDType, freeShippingCount, isPromotionEnd) {
+        if (convertBUDType && convertBUDType !== 'A' && !isNaN(freeShippingCount) && freeShippingCount > 0) {
+            var domain = getDomain();
+            loyaltyPopup = new IframePopup({ url: '//loyalty.coupang.com/loyalty/sign-up/intro?source=' + (domain || '').toLowerCase()+'_unconditionalFreeShippingBenefit', height: 605 });
+            logger.unconditionalFreeShippingBenefitImpression(domain, freeShippingCount, isPromotionEnd);
+
+            var membershipNudgeMessage = '';
+            if (convertBUDType === 'B' || convertBUDType === 'E') {
+                membershipNudgeMessage = Pacifik.formatMessage('coupang.web.0f1be2', '무료로 혜택 유지하기');
+            }
+            if (convertBUDType === 'C' || convertBUDType === 'F') {
+                membershipNudgeMessage = Pacifik.formatMessage('coupang.web.9b2aa9', '무료로 30일간 혜택 유지');
+            }
+            if (convertBUDType === 'D' || convertBUDType === 'G') {
+                membershipNudgeMessage = Pacifik.formatMessage('coupang.web.d0aba8', '로켓배송 무조건 무료 혜택받기');
+            }
+
+            var budComponent;
+            if (convertBUDType === 'B' || convertBUDType === 'C' || convertBUDType === 'D') {
+                budComponent = getBUDComponent(true, freeShippingCount, membershipNudgeMessage);
+                $('#freeShippingBenefitMenuContainer').append(budComponent).ready(function() {
+                    relocateAndShow();
+                });
+            }
+
+            if (convertBUDType === 'E' || convertBUDType === 'F' || convertBUDType === 'G') {
+                budComponent = getBUDComponent(false, freeShippingCount, membershipNudgeMessage);
+                $('#freeShippingBenefitMenuContainer').append(budComponent).ready(function (){
+                    var $freeShippingBenefitMenu = $('#headerMenu li#freeShippingBenefitMenu');
+                    var $freeShippingMouseOverPopup = $('.mouseOverPopup');
+                    var popupLeft = ($freeShippingBenefitMenu.outerWidth() - $freeShippingMouseOverPopup.outerWidth())/2;
+                    $freeShippingMouseOverPopup.css('left', popupLeft);
+                    $freeShippingMouseOverPopup.css('top', topBarHeight);
+                    $freeShippingBenefitMenu.on('mouseenter', function() {
+                        logger.unconditionalFreeShippingBenefitFoldUnfold(domain, 'unfold', isPromotionEnd);
+                    });
+                    $freeShippingBenefitMenu.on('mouseleave', function() {
+                        logger.unconditionalFreeShippingBenefitFoldUnfold(domain, 'fold', isPromotionEnd);
+                    });
+                    relocateAndShow();
+                });
+            }
+
+            $('.link-loyalty').on('click', function() {
+                logger.unconditionalFreeShippingBenefitWowSignupClick(domain, isPromotionEnd);
+                openLoyaltyPopup();
+            });
+        }
+    }
+
+    function relocateAndShow() {
+        var $freeShippingBenefitMenu = $('#headerMenu li#freeShippingBenefitMenu');
+        var menuPaddingTop = (topBarHeight - $freeShippingBenefitMenu.outerHeight()) / 2;
+        $freeShippingBenefitMenu.css('padding-top', menuPaddingTop);
+        $freeShippingBenefitMenu.css('padding-bottom', topBarHeight - $freeShippingBenefitMenu.outerHeight() + 2);
+        $freeShippingBenefitMenu.css('visibility', 'visible');
+    }
+
+    function request() {
+        var url = '//www.coupang.com/np/promotion/header-bud';
+        $.ajax({
+            url: url,
+            type: 'GET',
+            dataType: 'jsonp',
+            success: function(result) {
+                if(result) {
+                    var convertBUDType = result.convertBUDType;
+                    var freeShippingCount = result.freeShippingCount;
+                    applyConvertBUD(convertBUDType, freeShippingCount, true);
+                }
+            },
+            fail: function(err) {
+                console.error(err + ' ' + url);
+            }
+        })
+    }
+
+    function openLoyaltyPopup() {
+        loyaltyPopup.open();
+        loyaltyPopupResetFunc = loyaltyPopup.setFullScreen();
+        $(window).on('message', function (event) {
+            function _getEventData(data) {
+                var action;
+                try {
+                    if ($.isPlainObject(data) && data.type) {
+                        action = data;
+                    } else {
+                        action = JSON.parse(data);
+                    }
+                } catch (err) {
+                    action = { type: data };
+                }
+                return action;
+            }
+            var data = _getEventData(event.originalEvent.data);
+            if (data.type === 'frame.close') {
+                loyaltyPopupResetFunc();
+                loyaltyPopup.close();
+            }
+
+            if (data.type === 'location.href') {
+                loyaltyPopupResetFunc();
+                loyaltyPopup.close();
+            }
+        });
+    }
+
+    function render() {
+        var $promotionHeader = $('menu#headerMenu .promotion-header');
+        var $headerMenu = $('menu#headerMenu');
+        if ($promotionHeader.length > 0) {
+            $promotionHeader.after('<span id="freeShippingBenefitMenuContainer"></span>');
+        }
+        else {
+            $headerMenu.prepend('<span id="freeShippingBenefitMenuContainer"></span>');
+        }
+    }
+
+    function _init() {
+        try {
+            var domain = getDomain();
+            if (domain) {
+                render();
+                request();
+            }
+        }
+        catch(e) {
+
+        }
+    }
+
+    return {
+        init: _init
+    }
+});

@@ -1,0 +1,84 @@
+define(['jquery'], function ($) {
+
+  var PathsMap = [
+    [['^/$'], ['home']],
+    [['/np/search', '/nm/search'], ['srp']],
+    [['/vp/products', '/vm/products'], ['sdp']],
+    [['/cartView\\.pang', '/m/cartView\\.pang'], ['cart']],
+  ];
+
+  function hostMapWeblogParams(pathname, hostname) {
+
+    if (hostname.match(/coupang\.com$/)) {
+      for (var index in PathsMap) {
+        var curPathMap = PathsMap[index];
+        var paths = curPathMap[0];
+        var domain = curPathMap[1][0];
+
+        if (paths.some(function (pName) {
+          return pathname.match(new RegExp(pName));
+        })) {
+          return {
+            domain: domain,
+            pageName: domain,
+          };
+        }
+      }
+    }
+  }
+
+  var weblogDomainAndPageName = hostMapWeblogParams(window.location.pathname, window.location.hostname);
+
+  return {
+    sendFirstVisitLog: function () {
+      if (window.CoupangWebLog) {
+
+        var weblogParams = {
+          meta: {schemaId: 12323, schemaVersion: 1},
+          data: $.extend({}, weblogDomainAndPageName, {
+            eventName: 'wow_redcarpet_user_firstvisit_pageview',
+            logCategory: "view",
+            logType: "page",
+          })
+        };
+
+        CoupangWebLog.submit(weblogParams);
+      }
+    },
+    sendHeaderImpressionLog: function() {
+      if (window.CoupangWebLog) {
+
+        var weblogParams = {
+          meta: {schemaId: 12129, schemaVersion: 1},
+          data: $.extend({}, weblogDomainAndPageName, {
+            eventName: 'wow_redcarpet_header_banner_impression',
+            logCategory: "impression",
+            logType: "impression",
+          })
+        };
+
+        CoupangWebLog.submit(weblogParams);
+      }
+    },
+    /**
+     * @param type {'banner_body' | 'x_close'}
+     */
+    sendHeaderClickLog: function(type) {
+      if (window.CoupangWebLog) {
+
+        var weblogParams = {
+          meta: {schemaId: 12130, schemaVersion: 1},
+          data: $.extend({}, weblogDomainAndPageName, {
+            eventName: 'wow_redcarpet_header_banner_click',
+            logCategory: "event",
+            logType: "click",
+            clickType: type
+          })
+        };
+
+        CoupangWebLog.submit(weblogParams);
+      }
+    },
+
+  }
+});

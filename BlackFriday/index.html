@@ -284,7 +284,7 @@
         }
 
         .small-popup #countdown {
-            font-size: 1.5em;
+            font-size: 2em;
             font-weight: bold;
             color: #ff0000; /* 카운트다운 색상 설정 */
         }
@@ -318,7 +318,7 @@
             border-radius: 50%;
         }
 
-        .toolbar a:hover::after {
+        .toolbar a:not([onclick]):hover::after {
             content: attr(data-hover-text);
             position: absolute;
             left: -80px; /* 텍스트 위치 조정 */
@@ -349,7 +349,7 @@
         .marquee {
             display: inline-block;
             white-space: nowrap;
-            animation: marquee 11s linear infinite; /* 속도 증가 */
+            animation: marquee 16s linear infinite; /* 속도 증가 */
             color: #000;
             font-size: 0.8em; /* 글씨 크기 줄임 */
             padding: 5px 0; /* 세로 보폭 줄임 */
@@ -410,7 +410,7 @@
                     <li><a href="#">BEST</a></li>
                     <li><a href="#">NEW</a></li>
                     <li><a href="#">오늘의할인</a></li>
-                    <li><a href="#">전체보기</a></li>
+                    <li><a href="#">카테고리</a></li>
                     <li class="search-bar">
                         <input type="text" placeholder="검색어 입력">
                         <button type="button">검색</button>
@@ -440,42 +440,42 @@
         <!-- 각 상품 항목 -->
         <div class="product-item">
             <div class="product-img-container">
-                <img src="images/appliance1.jpg" alt="상품 이미지 1" class="product-img">
+                <img src="images/vacuum2.jpg" alt="상품 이미지 1" class="product-img">
             </div>
-            <p>청소기</p>
-            <p class="price"><span class="original-price">₩120,000</span> ₩100,000</p>
+            <p>로봇청소기</p>
+            <p class="price"><span class="original-price">₩590,000</span> ₩320,000</p>
             <button class="btn" onclick="showSuccessPopup()">구매하기</button>
         </div>
         <div class="product-item">
             <div class="product-img-container">
-                <img src="images/appliance2.jpg" alt="상품 이미지 2" class="product-img">
+                <img src="images/oven.jpg" alt="상품 이미지 2" class="product-img">
             </div>
-            <p>세탁기</p>
-            <p class="price"><span class="original-price">₩150,000</span> ₩130,000</p>
+            <p>오븐</p>
+            <p class="price"><span class="original-price">₩150,000</span> ₩79,000</p>
             <button class="btn" onclick="showSuccessPopup()">구매하기</button>
         </div>
         <div class="product-item">
             <div class="product-img-container">
-                <img src="images/appliance3.jpg" alt="상품 이미지 3" class="product-img">
+                <img src="images/toast.png" alt="상품 이미지 3" class="product-img">
             </div>
             <p>토스터</p>
-            <p class="price"><span class="original-price">₩200,000</span> ₩180,000</p>
+            <p class="price"><span class="original-price">₩200,000</span> ₩99,000</p>
             <button class="btn" onclick="showSuccessPopup()">구매하기</button>
         </div>
         <div class="product-item">
             <div class="product-img-container">
-                <img src="images/appliance4.jpg" alt="상품 이미지 4" class="product-img">
+                <img src="images/fridge.jpg" alt="상품 이미지 4" class="product-img">
             </div>
-            <p>면도기</p>
-            <p class="price"><span class="original-price">₩180,000</span> ₩160,000</p>
+            <p>냉장고</p>
+            <p class="price"><span class="original-price">₩4,800,000</span> ₩3,200,000</p>
             <button class="btn" onclick="showSuccessPopup()">구매하기</button>
         </div>
         <div class="product-item">
             <div class="product-img-container">
-                <img src="images/bike.jpg" alt="상품 이미지 5" class="product-img">
+                <img src="images/bike2.png" alt="상품 이미지 5" class="product-img">
             </div>
             <p>자전거</p>
-            <p class="price"><span class="original-price">₩140,000</span> ₩120,000</p>
+            <p class="price"><span class="original-price">₩140,000</span> ₩59,000</p>
             <button class="btn" onclick="showSuccessPopup()">구매하기</button>
         </div>
         <div class="product-item">
@@ -483,15 +483,15 @@
                 <img src="images/washing.png" alt="상품 이미지 6" class="product-img">
             </div>
             <p>세탁기</p>
-            <p class="price"><span class="original-price">₩160,000</span> ₩140,000</p>
+            <p class="price"><span class="original-price">₩329,000</span> ₩149,000</p>
             <button class="btn" onclick="showSuccessPopup()">구매하기</button>
         </div>
         <div class="product-item">
             <div class="product-img-container">
                 <img src="images/mixer.jpg" alt="상품 이미지 7" class="product-img">
             </div>
-            <p>믹서기</p>
-            <p class="price"><span class="original-price">₩190,000</span> ₩170,000</p>
+            <p>블렌더</p>
+            <p class="price"><span class="original-price">₩179,000</span> ₩79,000</p>
             <button class="btn" onclick="showSuccessPopup()">구매하기</button>
         </div>
         <div class="product-item" style="background: none; border: none;">
@@ -512,7 +512,7 @@
         <div class="popup-content">
             <span class="close" onclick="closePopup()">&times;</span>
             <img src="images/memoji.jpeg" alt="팝업 이미지" style="width: 50%; height: auto; margin-bottom: 1em;">
-            <p>지금 바로 사면 5% 추가할인! <br><span id="countdown" style="color: red;">hh:mm:ss</span></p>
+            <p>지금 바로 사면 5% 추가할인! <br><span id="countdown" style="color: red; font-size: 2em;">hh:mm:ss</span></p>
             <hr>
             <p>썸머 키워드 즐겨찾기</p>
             <p>#살안타템 #쟁여둘템 #장마템 #컬러풀템</p>
@@ -522,7 +522,7 @@
     <!-- 작은 팝업창 -->
     <div id="small-popup" class="small-popup">
         <div class="small-popup-content">
-            <p>5% 추가할인 쿠폰 소멸임박!<br><span id="small-countdown" style="color: red;">hh:mm:ss</span></p>
+            <p>5% 추가할인 쿠폰 소멸임박!<br><span id="small-countdown" style="color: red; font-size: 2em;">hh:mm:ss</span></p>
         </div>
     </div>
 
@@ -539,8 +539,9 @@
         <a href="#" data-hover-text="마이픽 메뉴"><img src="images/3.png" alt="아이콘 3"></a>
         <a href="#" data-hover-text="네이버톡"><img src="images/4.png" alt="아이콘 4"></a>
         <a href="#" data-hover-text="카카오상담"><img src="images/5.png" alt="아이콘 5"></a>
-        <a href="#" data-hover-text="↑"><img src="images/6.png" alt="아이콘 6"></a>
-        <a href="#" data-hover-text="↓"><img src="images/7.png" alt="아이콘 7"></a>
+        <a href="#" onclick="scrollToTop()"><img src="images/6.png" alt="아이콘 6"></a>
+        <a href="#" onclick="scrollToBottom()"><img src="images/7.png" alt="아이콘 7"></a>
+    
     </div>
 
     <script>
@@ -593,6 +594,22 @@
         // 성공 팝업창 닫기
         function closeSuccessPopup() {
             document.getElementById('success-popup').style.display = 'none';
+        }
+
+        // 페이지 상단으로 스크롤
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // 페이지 하단으로 스크롤
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
         }
     </script>
 </body>

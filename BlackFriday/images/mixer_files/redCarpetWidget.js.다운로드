@@ -1,0 +1,179 @@
+define(['jquery', './redCarpetWeblog', '../utils/cookieUtils'],
+    function ($, redCarpetWeblog, cookieUtil) {
+      
+      var redCarpetPopupIframeId = 'redCarpetPopup';
+      var redCarpetLoyaltyUrl = 'https://loyalty.coupang.com';
+      var redCarpetLoyaltyPopupUrl = redCarpetLoyaltyUrl + '/loyalty/red-carpet/popup';
+      
+      var CARPET_TOP_HEADER_CLOSED_COOKIE_NAME = 'CARPET_TOP_HEADER_CLOSED';
+      
+      
+      function initialize() {
+        var oRedCarpetInfo = $("#red-carpet-info");
+        
+        /**
+         *
+         * @type {{
+         *   redCarpetPromotionHeaderType: "RED_CARPET_PROMOTION_HEADER_WITH_DATE" | "RED_CARPET_PROMOTION_HEADER_WITH_TIMER" | "RED_CARPET_PROMOTION_HEADER";
+         *   remainPromotionDays: number;
+         *   redCarpetStartTimeUTC: number;
+         *   currentServerTimeUTC: number;
+         *   promotionDurationDays: number;
+         *   displayPromotionHeader: boolean;
+         *   sendWeblog: boolean;
+         * }}
+         */
+        var headerInfo = oRedCarpetInfo.data('redCarpetPromotionHeader') || {};
+        
+        /**
+         *
+         * @type {{
+         *   redCarpetPromotionPopupType: "RED_CARPET_PROMOTION_POPUP_WITH_DATE" | "RED_CARPET_PROMOTION_POPUP";
+         *   promotionDurationDays: number;
+         *   displayPromotionPopup: boolean;
+         *   sendWeblog: boolean;
+         * }}
+         */
+        var popupInfo = oRedCarpetInfo.data('redCarpetPromotionPopup') || {};
+        
+        // no data display in html
+        oRedCarpetInfo.remove();
+        
+        if ($.isEmptyObject(popupInfo) && $.isEmptyObject(headerInfo)) {
+          return;
+        }
+        
+        if (headerInfo.sendWeblog || popupInfo.sendWeblog) {
+          redCarpetWeblog.sendFirstVisitLog()
+        }
+        
+        // initial red-carpet promotion header logic
+        if (headerInfo.displayPromotionHeader) {
+          redCarpetWeblog.sendHeaderImpressionLog();
+          
+          // all period header logic
+          $('#red-carpet-header .red-carpet-header-close').on('click', function () {
+            redCarpetWeblog.sendHeaderClickLog('x_close');
+            
+            var date = new Date();
+            
+            date.setHours(24, 0, 0);
+            
+            var durationMinutes = (date.getTime() - Date.now()) / 1000 / 60;
+            
+            // expired until tonight
+            cookieUtil.setCookie(CARPET_TOP_HEADER_CLOSED_COOKIE_NAME, 'true', {
+              timeUnit: 'MINUTE',
+              timeValue: durationMinutes,
+            })
+            
+            $('#red-carpet-header').remove();
+            
+          });
+          
+          $('#red-carpet-header .red-carpet-msg').on('click', function () {
+            redCarpetWeblog.sendHeaderClickLog("banner_body");
+            
+            appendPopupIframe("RED_CARPET_PROMOTION_POPUP_BY_CLICK")
+          });
+          
+          // 24 hours count down
+          if (headerInfo.redCarpetPromotionHeaderType === "RED_CARPET_PROMOTION_HEADER_WITH_TIMER") {
+            
+            coupangWebRequire(["common/countdown"], function (CountDown) {
+              var startTime = headerInfo.currentServerTimeUTC;
+              var endTime = headerInfo.redCarpetStartTimeUTC + daysToMilliseconds(headerInfo.promotionDurationDays);
+              
+              var moment = $('#red-carpet-header .red-carpet-counter span:nth-child(odd)');
+              var $hours = $(moment[0]);
+              var $minutes = $(moment[1]);
+              var $second = $(moment[2]);
+              
+              new CountDown({
+                startTime: startTime,
+                endTime: endTime,
+                onRender: function (dateTime) {
+                  
+                  setDomTime($second, dateTime.seconds);
+                  setDomTime($minutes, dateTime.minutes);
+                  setDomTime($hours, dateTime.hours);
+                  
+                },
+                onComplete: function () {
+                  window.location.reload();
+                }
+              });
+              
+            })
+            
+          }
+          
+        }
+        
+        // initial red-carpet promotion popup logic
+        if (popupInfo.displayPromotionPopup) {
+          appendPopupIframe(popupInfo.redCarpetPromotionPopupType, popupInfo.promotionDurationDays);
+        }
+        
+        // listen all the popupIframe message, if it should close iframe
+        window.addEventListener('message', function (e) {
+          if (e.origin === redCarpetLoyaltyUrl) {
+            if (e.data === "closeRedCarpetPopup") {
+              $('#' + redCarpetPopupIframeId).remove();
+            } else if (e.data === 'successOpenRedCarpetPopup') {
+              $('#' + redCarpetPopupIframeId).css({
+                width: '100vw',
+                height: '100vh',
+                zIndex: 1000
+              });
+            }
+          }
+        });
+      }
+      
+      /**
+       *
+       * @param popupType { "RED_CARPET_PROMOTION_POPUP_WITH_DATE" | "RED_CARPET_PROMOTION_POPUP" | "RED_CARPET_PROMOTION_POPUP_BY_CLICK"}
+       * @param {number=} duration
+       */
+      function appendPopupIframe(popupType, duration) {
+        
+        if (!document.querySelector('#' + redCarpetPopupIframeId)) {
+          
+          var $iframe = $('<iframe />');
+          
+          $iframe.css({
+            position: 'fixed',
+            height: 0,
+            width: 0,
+            top: 0,
+            left: 0,
+            border: 'none',
+            zIndex: -1
+          })
+          
+          $iframe.attr({
+            id: redCarpetPopupIframeId,
+            src: redCarpetLoyaltyPopupUrl + '?popupType=' + popupType + (duration ? '&duration=' + duration : ''),
+            referrerPolicy: 'no-referrer-when-downgrade'
+          })
+          
+          $('body').append($iframe);
+          
+        }
+        
+      }
+      
+      function daysToMilliseconds(days) {
+        return days * 24 * 60 * 60 * 1000;
+      }
+      
+      function setDomTime($time, time) {
+        if (parseInt($time.text()) !== time) {
+          $time.text(('0' + time).slice(-2))
+        }
+      }
+      
+      initialize();
+      
+    });

@@ -1,0 +1,1 @@
+define(["jquery"],function($){var cetegoryCheckerTravel={isTravelLodgingMain:function(defaulttab){if($("html").hasClass("lt-ie9"))return false;else return"LODGING"===defaulttab}};return cetegoryCheckerTravel});

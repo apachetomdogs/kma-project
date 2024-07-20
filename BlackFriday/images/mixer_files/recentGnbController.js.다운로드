@@ -1,0 +1,774 @@
+define([
+    'jquery',
+    'common/template/urlBuilder',
+    'common/essentialData'
+], function($, urlBuilder, essentialData) {
+    var webLog = (function() {
+        function sendWebLog(logData) {
+            try {
+                window.CoupangWebLog && window.CoupangWebLog.submit(logData);
+            } catch (error) {
+                handleUncatchedError(error)
+            }
+        }
+
+        function gnb_browsing_history_menu_impression() {
+            sendWebLog({
+                data: {
+                    logCategory: "impression",
+                    logType: "impression",
+                    domain: "gnb",
+                    eventName: "gnb_browsing_history_menu_impression",
+                    pageName: "gnb"
+                },
+                meta: {
+                    schemaId: 13154,
+                    schemaVersion: 1
+                },
+            })
+        }
+
+
+        function gnb_browsing_history_menu_click(gnbBrowsingHistoryWidgetItemCount) {
+            sendWebLog({
+                data: {
+                    logCategory: "event",
+                    logType: "click",
+                    domain: "gnb",
+                    eventName: "gnb_browsing_history_menu_click",
+                    pageName: "gnb",
+                    gnbBrowsingHistoryWidgetItemCount: gnbBrowsingHistoryWidgetItemCount
+                },
+                meta: {
+                    schemaId: 13155,
+                    schemaVersion: 1
+                }
+            })
+        }
+
+        function gnb_browsing_history_menu_click_GNB_V2(gnbBrowsingHistoryWidgetItemCount,isStickySimplifiedGnb) {
+            sendWebLog({
+                data: {
+                    logCategory: "event",
+                    logType: "click",
+                    domain: "gnb",
+                    eventName: "gnb_browsing_history_menu_click",
+                    pageName: "gnb",
+                    gnbBrowsingHistoryWidgetItemCount: gnbBrowsingHistoryWidgetItemCount,
+                    isStickySimplifiedGnb: isStickySimplifiedGnb
+                },
+                meta: {
+                    schemaId: 13155,
+                    schemaVersion: 2
+                }
+            })
+        }
+
+
+        function gnb_browsing_history_widget_impression(gnbBrowsingHistoryWidgetItemCount) {
+            sendWebLog({
+                data: {
+                    logCategory: "impression",
+                    logType: "impression",
+                    domain: "gnb",
+                    eventName: "gnb_browsing_history_widget_impression",
+                    pageName: "gnb",
+                    gnbBrowsingHistoryWidgetItemCount: gnbBrowsingHistoryWidgetItemCount
+                },
+                meta: {
+                    schemaId: 13156,
+                    schemaVersion: 1
+                },
+            })
+        }
+
+        function gnb_browsing_history_widget_click(gnbBrowsingHistoryWidgetClickType) {
+            sendWebLog({
+                data: {
+                    logCategory: "event",
+                    logType: "click",
+                    domain: "gnb",
+                    eventName: "gnb_browsing_history_widget_click",
+                    pageName: "gnb",
+                    gnbBrowsingHistoryWidgetClickType: gnbBrowsingHistoryWidgetClickType,
+                    sourceType: "gnb_browsing_history_widget",
+                },
+                meta: {
+                    schemaId: 13157,
+                    schemaVersion: 1
+                },
+            })
+        }
+
+
+        function gnb_browsing_history_deleteall_popup_impression() {
+            sendWebLog({
+                data: {
+                    logCategory: "impression",
+                    logType: "impression",
+                    domain: "gnb",
+                    eventName: "gnb_browsing_history_deleteall_popup_impression",
+                    pageName: "gnb",
+                },
+                meta: {
+                    schemaId: 13158,
+                    schemaVersion: 1
+                },
+            })
+        }
+
+        function gnb_browsing_history_deleteall_popup_click(gnbBrowsingHistoryDeleteAllClickType) {
+            sendWebLog({
+                data: {
+                    logCategory: "event",
+                    logType: "click",
+                    domain: "gnb",
+                    eventName: "gnb_browsing_history_deleteall_popup_click",
+                    pageName: "gnb",
+                    gnbBrowsingHistoryDeleteAllClickType: gnbBrowsingHistoryDeleteAllClickType
+                },
+                meta: {
+                    schemaId: 13159,
+                    schemaVersion: 1
+                },
+            })
+        }
+
+
+        return {
+            gnb_browsing_history_menu_impression: gnb_browsing_history_menu_impression,
+            gnb_browsing_history_menu_click: gnb_browsing_history_menu_click,
+            gnb_browsing_history_menu_click_GNB_V2: gnb_browsing_history_menu_click_GNB_V2,
+            gnb_browsing_history_widget_impression: gnb_browsing_history_widget_impression,
+            gnb_browsing_history_widget_click: gnb_browsing_history_widget_click,
+            gnb_browsing_history_deleteall_popup_impression: gnb_browsing_history_deleteall_popup_impression,
+            gnb_browsing_history_deleteall_popup_click: gnb_browsing_history_deleteall_popup_click
+        };
+    })();
+
+
+    var API = (function() {
+        var HOST = 'https://reco.coupang.com';
+
+        function getRecentViewedProducts() {
+            return window.fetch && window.fetch(HOST + '/api/v2/viewed-products', {
+                credentials: "include"
+            }).then(function(response) {
+                return response.json()
+            }).then(function(response) {
+                var products = response.data && response.data.content || []
+                return products
+            })
+        }
+
+        function deleteProducts(productIds) {
+            return window.fetch && window.fetch(HOST + '/api/v2/viewed-products/deleteByProductIds', {
+                method: 'POST',
+                cache: 'no-cache',
+                mode: 'cors',
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": 'application/json'
+                },
+                body: JSON.stringify({
+                    productIds: productIds
+                })
+            }).then(function (response) {
+                return response.json()
+            }).then(function (response) {
+                return response && response.displayViewedItems || []
+            })
+        }
+
+        return {
+            getRecentViewedProducts: getRecentViewedProducts,
+            deleteProducts: deleteProducts
+        }
+    })();
+
+
+
+    var rootNode = null;
+
+    var S = {
+        triggerNode: '.recent-history-gnb',
+        triggerNodeItem: '.recent-history-item',
+        anchorNode: '.recent-history-item .gnb-icon-recent-history__icon',
+        rootNode: '.recent-viewed-products',
+        triangleNode: '.recent-viewed-products__triangle',
+        emptyNode: '.recent-viewed-products_empty',
+        maskNode: '.recent-viewed-products__mask',
+        productsWrap: '.recent-viewed-products__product_wrap',
+        productItem: '.recent-viewed-products__product_item',
+        nextNode: '.recent-viewed-products__next',
+        preNode: '.recent-viewed-products__pre'
+    }
+
+    var zIndexFix = {
+        enable: function(){
+            $('#header, .top-bar.new-header').css({ 'z-index': '101' })
+        },
+        disable: function(){
+            $('#header, .top-bar.new-header').css({ 'z-index': '' })
+        }
+    }
+
+    function productTpl(data) {
+        var tpl = '<a href="https://www.coupang.com{{link}}?sourceType=gnb_browsing_history_widget" class="recent-viewed-products__product_item" data-product-id="{{productId}}">'
+            + '<img src="{{thumbnailUrl}}" onerror="" />'
+            + '<span class="recent-viewed-products__product_item__title truncate" style="-webkit-box-orient: vertical">{{title}}</span>'
+            + '<div> <button class="recent-viewed-products__product_item__delete">삭제</button> </div>'
+            + '</a>'
+
+        return tpl.replace(/\{\{(\w+)\}\}/g, function(_, $1) {
+            return data[$1]
+        })
+    }
+
+
+    function toggleNextNodeVisibility(on) {
+        if (on) {
+            $(S.nextNode).show();
+        } else {
+            $(S.nextNode).hide();
+        }
+    }
+    function togglePreNodeVisibility(on) {
+        if (on) {
+            $(S.preNode).show();
+        } else {
+            $(S.preNode).hide();
+        }
+    }
+
+    function prePage() {
+        var firstPageWidth = getFirstPageWidth()
+        if (getLastestScrolledPosition() <= firstPageWidth && firstPageWidth > 0) {
+            togglePreNodeVisibility(false)
+        }
+        toggleNextNodeVisibility(true);
+        var maxItems = numberOfItemsCanBeShown();
+        if (!getScrollWrapNode()) return;
+        var scrollPosition = getLastestScrolledPosition() - (maxItems * getProductItemWidth())
+        changeScroll(scrollPosition);
+        if (scrollPosition <= getProductItemWidth()) {
+            togglePreNodeVisibility(false)
+        }
+    }
+
+
+    function getFirstPageWidth() {
+        var bodyNode = document.querySelector('.recent-viewed-products__body')
+        var nextNode = document.querySelector(S.nextNode)
+        if (bodyNode && nextNode) {
+            return bodyNode.offsetWidth - nextNode.offsetWidth
+        }
+
+        return 0;
+    }
+
+    function attach() {
+        rootNode = document.querySelector(S.rootNode)
+        if (!rootNode) return;
+
+        webLog.gnb_browsing_history_menu_impression();
+
+        // next batch
+        var nextNode = rootNode.querySelector(S.nextNode)
+        var preNode = rootNode.querySelector(S.preNode)
+
+        preNode.addEventListener('click', function() {
+            webLog.gnb_browsing_history_widget_click('previous')
+            prePage()
+        })
+
+        nextNode.addEventListener('click', function() {
+            webLog.gnb_browsing_history_widget_click('next')
+            var maxItems = numberOfItemsCanBeShown();
+
+            // show pre node fisrt
+            togglePreNodeVisibility(true)
+
+            var scrollWrapNode = getScrollWrapNode();
+            if (!scrollWrapNode) return;
+            var scrollPosition = maxItems * getProductItemWidth() + getLastestScrolledPosition();
+            changeScroll(scrollPosition)
+
+            toggleNextNodeVisibility(hasMoreContentToScroll())
+        })
+
+        // weird impression logic
+        $(S.triggerNodeItem).on('mouseenter', function() {
+            $(this).data('impressionTag', true)
+        })
+
+        $(S.triggerNodeItem).on('mouseleave', function() {
+            $(this).data('impressionTag', false)
+        })
+
+        $(S.triggerNode).on('mouseover', function() {
+            $(this).data('mouseover', true)
+        })
+
+        $(S.triggerNode).on('mouseout', function() {
+            $(this).data('mouseover', false)
+        })
+
+        var leaveTimeOptions = {
+            timer: null,
+            delay: 250
+        }
+
+        var invalidLeaveTimer = function(){
+            clearTimeout(leaveTimeOptions.timer)
+            leaveTimeOptions.timer = null;
+        }
+
+        $(S.triggerNode).on('mouseenter', function() {
+            invalidLeaveTimer()
+            // comming after triggerred deletion all modal
+            if ($(S.triggerNode).data('disabled')) {
+                $(S.triggerNode).data('disabled', false)
+            } else {
+                $(this).data('mouseenter', true)
+                showRecentWidget();
+            }
+        })
+
+        $(S.triggerNode).on('mouseleave', function() {
+            // prevent widget from closing when deletion modal is shown
+            // when deletion modal is shown, a mouseleave would be triggerred
+            if (!$(this).data('disabled')) {
+                invalidLeaveTimer();
+
+                leaveTimeOptions.timer = setTimeout(function(){
+                    leaveTimeOptions.timer = null;
+                    $(S.triggerNode).data('mouseenter', false)
+                    hideRecentWidget();
+                    $(S.emptyNode).hide();
+                }, leaveTimeOptions.delay)
+            }
+        })
+
+        // item click event
+        $(rootNode).on('click', S.productItem, function(evt) {
+            webLog.gnb_browsing_history_widget_click('item_click')
+        })
+
+        $(rootNode).on('click', '.recent-viewed-products__product_item__delete', function(evt) {
+            evt.preventDefault();
+            evt.stopImmediatePropagation()
+
+            webLog.gnb_browsing_history_widget_click('delete_item')
+            var $productNode = $(this).parents(S.productItem)
+            var productId = $productNode.data('productId')
+            // weird
+            var result = API.deleteProducts([productId]);
+            result && result.then(function(products) {
+                if (products.length) {
+                    replaceProductsContent(products)
+                    updateRemainingCounts();
+
+                    // this could be last item in row,
+                    // can affect pre/next node
+                    if (hasNoMoreVisibleItems()) { // delete last item in visible row
+                        prePage();
+                        toggleNextNodeVisibility(hasMoreContentToScroll())
+                    }
+                    return;
+                }
+
+                $productNode.remove();
+                hideRecentWidget();
+            })
+        })
+
+        $(rootNode).on('click', '.recent-viewed-products__delete_all', function(evt) {
+            webLog.gnb_browsing_history_widget_click('delete_all')
+
+            webLog.gnb_browsing_history_deleteall_popup_impression();
+            $(S.triggerNode).data('disabled', true);
+            openDeletionConfirmModal(function onCancel(closeModal) {
+                webLog.gnb_browsing_history_deleteall_popup_click('cancel')
+                closeModal();
+                if (!$(S.triggerNode).data('mouseover')) {
+                    hideRecentWidget()
+                }
+            }, function onConfirm(closeModal) {
+                webLog.gnb_browsing_history_deleteall_popup_click('delete')
+                var productIds = Array.from(document.querySelectorAll(S.productItem)).map(function(e){return e.dataset.productId})
+                API.deleteProducts(productIds).then(function(remainingProducts) {
+                    if (!remainingProducts.length) {
+                        $(S.triggerNode).data('disabled', false);
+                        hideRecentWidget();
+                        closeModal();
+                        return;
+                    }
+                    replaceProductsContent(remainingProducts);
+                    changeScroll(0);
+                    var showNextButton = remainingProducts.length >= numberOfItemsCanBeShown();
+                    toggleNextNodeVisibility(showNextButton)
+                    togglePreNodeVisibility(false)
+                    closeModal();
+                    updateRemainingCounts()
+                }).catch(function() {
+                    $(S.triggerNode).data('disabled', false);
+                    closeModal();
+                })
+            })
+        })
+    }
+
+
+
+    function updateRemainingCounts() {
+        $('.recent-viewed-products__counts').text($(S.productItem).length)
+    }
+
+    function changeScroll(position) {
+        var scrollWrapNode = getScrollWrapNode();
+        if (!scrollWrapNode) return;
+        if (position < 0) {
+            position = 0;
+        }
+        scrollWrapNode.dataset.scrolled = position
+        scrollWrapNode.style.transform = 'translateX(' + -position + 'px)'
+    }
+
+    function getLastestScrolledPosition() {
+        var scrollWrapNode = getScrollWrapNode();
+        if (!scrollWrapNode) return 0;
+
+        return +scrollWrapNode.dataset.scrolled || 0
+    }
+
+    function hasNoMoreVisibleItems() {
+        var scrollPosition = getLastestScrolledPosition();
+        var wrapWidth = getScrollWrapScrollWidth();
+        if (scrollPosition >= wrapWidth && scrollPosition > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    function hasMoreContentToScroll() {
+        var scrollPosition = getLastestScrolledPosition();
+        var containerWidth = getScrollContainerWidth();
+        var wrapWidth = getScrollWrapScrollWidth();
+        if (scrollPosition + containerWidth >= wrapWidth) {
+            return false;
+        }
+        return true;
+    }
+
+    function getScrollWrapNode() {
+        return rootNode.querySelector(S.productsWrap)
+    }
+
+    function getScrollWrapScrollWidth() {
+        var scrollWrapNode = getScrollWrapNode()
+        if (!scrollWrapNode) return 0;
+
+        return scrollWrapNode.scrollWidth
+    }
+
+    function getProductItemWidth() {
+        var productNode = rootNode.querySelector(S.productItem)
+        if (!productNode) return 0;
+        return productNode.clientWidth;
+    }
+
+
+    function getScrollContainerWidth() {
+        var containerNode = rootNode.querySelector('.recent-viewed-products__product')
+        if (!containerNode) return 0;
+
+        return containerNode.clientWidth;
+    }
+
+    function numberOfItemsCanBeShown() {
+        var itemWidth = getProductItemWidth();
+        var conatinerWidth = getScrollContainerWidth();
+        if (!itemWidth || !conatinerWidth) return 0;
+
+        return Math.floor(conatinerWidth / itemWidth)
+    }
+
+    function getAnchorPosition() {
+        var anchorNode = document.querySelector(S.anchorNode)
+        var position = {
+            x: 0,
+            y: 0
+        }
+        if (!anchorNode) {
+            return position;
+        }
+
+        var rect = anchorNode.getBoundingClientRect();
+
+        return {
+            x: rect.x + rect.width / 2,
+            y: rect.bottom
+        }
+    }
+
+
+    function showEmptyContent() {
+        $(S.rootNode).hide();
+        $(S.emptyNode).show();
+        $(S.maskNode).remove();
+    }
+
+    function hideEmptyContent() {
+        $(S.rootNode).hide();
+        $(S.emptyNode).show();
+    }
+
+    var loadingClass = 'recent-viewed-products__loading_state'
+    function toggleLoadingUI(on) {
+        var $rootNode = $(S.rootNode)
+        if (on) {
+            $rootNode.addClass(loadingClass);
+        } else {
+            $rootNode.removeClass(loadingClass);
+        }
+    }
+
+    function disableBodyScroll(disalbed) {
+        var node = document.querySelector('html')
+        if (!node) return;
+
+        if (disalbed) {
+            node.style.overflow = 'hidden'
+        } else {
+            node.style.overflow = ''
+        }
+    }
+
+    function calcPaddingWith() {
+        var offset = 20
+        var viewPortWidth = $(window).width()
+        var headerWidth = $('#header').width()
+        if (viewPortWidth - headerWidth >= 0) {
+            return (viewPortWidth - headerWidth) / 2 + offset
+        }
+        return offset;
+    }
+
+
+    function showRecentWidgetMask() {
+        var $rootNode = $(S.rootNode);
+        var maskNode = document.createElement('div')
+        maskNode.className = 'recent-viewed-products__mask'
+        if ($rootNode[0]) {
+            $rootNode.show();
+            // maskNode.style.top = $rootNode[0].getBoundingClientRect().bottom + 'px';
+            // hight of loading state is shorter than this widget, so have to move mask to the top
+            maskNode.style.top = ($rootNode[0].getBoundingClientRect().top - 2) + 'px';
+        }
+        // adjust top in responsive GNB when GNB is sticky
+        var showResponsiveGnb = $('.renewal-header').data('showResponsiveGnb');
+        var isSticky = $('.is-sticky');
+        if(showResponsiveGnb && isSticky.length > 0) {
+            var coupangWebLog = document.getElementById('coupang-web-log');
+            var tti = coupangWebLog && coupangWebLog.getAttribute('data-tti');
+            if(tti) tti = JSON.parse(tti);
+            (tti && tti.pageName && tti.pageName === 'srp') ? maskNode.style.top = 115 + 'px' : maskNode.style.top = 65 + 'px';
+        }
+        document.body && typeof document.body.append  == 'function' && document.body.append(maskNode);
+    }
+
+    var WAITING_TIME = 3000;
+    var loading_waiting_timer = null;
+
+    function showRecentWidget() {
+        if ($(S.rootNode).is(':visible') || $(S.emptyNode).is(':visible')) return;
+
+        $(S.emptyNode).hide();
+        $(S.maskNode).remove();
+        togglePreNodeVisibility(false);
+
+        if (loading_waiting_timer) {
+            clearTimeout(loading_waiting_timer)
+        }
+        loading_waiting_timer = setTimeout(function() {
+            toggleLoadingUI(true)
+            showRecentWidgetMask();
+            loading_waiting_timer = null;
+        }, WAITING_TIME)
+
+        var anchorPosition = getAnchorPosition();
+        var $rootNode = $(S.rootNode);
+
+        var paddingWidth = calcPaddingWith();
+        $rootNode.css({
+            'padding-left': paddingWidth + 'px',
+            'padding-right': paddingWidth + 'px'
+        })
+
+        var topOffset = 63;
+
+        // adjust top in responsive GNB when GNB is sticky
+        var showResponsiveGnb = $('.renewal-header').data('showResponsiveGnb');
+        var isSticky = $('.is-sticky');
+        if(showResponsiveGnb && isSticky.length > 0) {
+            var coupangWebLog = document.getElementById('coupang-web-log');
+            var tti = coupangWebLog && coupangWebLog.getAttribute('data-tti');
+            if(tti) tti = JSON.parse(tti);
+            topOffset =  (tti && tti.pageName && tti.pageName === 'srp') ? 63 - 21  : 63 - 17;
+        }
+
+        $rootNode.css('top', (anchorPosition.y + topOffset) + 'px');
+        $(S.triangleNode).css('left', anchorPosition.x + 'px');
+
+        var sendClickLog = function(size) {
+            // send click log for :hover action
+            if ($(S.triggerNodeItem).data('impressionTag')) {
+                // resopnsive GNB V2
+                var showResponsiveGnb = $('.renewal-header').data('showResponsiveGnb');
+                if (showResponsiveGnb){
+                    var isStickySimplifiedGnb =  $('#sticky-wrapper').hasClass('is-sticky');
+                    webLog.gnb_browsing_history_menu_click_GNB_V2(size,isStickySimplifiedGnb);
+                } else {
+                    webLog.gnb_browsing_history_menu_click(size)
+                }
+
+                $(S.triggerNodeItem).data('impressionTag', false)
+            }
+        }
+
+        var result = API.getRecentViewedProducts();
+        result && result.then(function(products) {
+            clearTimeout(loading_waiting_timer)
+            toggleLoadingUI(false)
+
+            sendClickLog(products.length)
+
+
+            // only show widget when user's mouse still on-hover
+            if ($(S.triggerNode).data('mouseenter')) {
+                if (products.length) {
+                    // fix id.coupang.com style problem with #sidebar
+                    zIndexFix.enable();
+
+
+                    webLog.gnb_browsing_history_widget_impression(products.length)
+                    replaceProductsContent(products)
+                    changeScroll(0)
+                    updateRemainingCounts();
+                    $(S.rootNode).show();
+                    showRecentWidgetMask();
+                    toggleNextNodeVisibility(hasMoreContentToScroll())
+                    once(window, 'scroll', function() {
+                        $(S.maskNode).remove();
+                        zIndexFix.disable();
+                        $rootNode.hide();
+                    }, { passive: true })
+
+                } else {
+                    showEmptyContent();
+                    zIndexFix.disable()
+                }
+            }
+        }, function () {
+            sendClickLog(0)
+
+            clearTimeout(loading_waiting_timer)
+            toggleLoadingUI(false)
+            if ($(S.triggerNode).data('mouseenter')) {
+                showEmptyContent();
+            }
+            // $(S.maskNode).remove();
+            zIndexFix.disable()
+        })
+    }
+
+    function once(target, eventName, callback, options) {
+        var handler = function(evt) {
+            callback(evt)
+            target.removeEventListener(eventName, handler)
+        }
+        target.addEventListener(eventName, handler, options)
+    }
+
+    function handleUncatchedError(error) {
+        // todo: replace this with report
+        console.error(error)
+    }
+
+    function replaceProductsContent(products) {
+        if (!products || !products.length) return;
+        $(S.productsWrap).html(products.map(productTpl).join(''))
+    }
+
+
+    function hideRecentWidget() {
+        $(S.maskNode).remove();
+        $(S.rootNode).hide();
+        zIndexFix.disable()
+    }
+
+    var deletionAllMountingNode = null;
+    function openDeletionConfirmModal(onCancel, onConfirm) {
+        var id = 'recent-viewed-products__deletion_modal_container'
+
+        if ($('#' + id).length) {
+            closeDeletionConfirmModal();
+        }
+
+        $(S.maskNode).hide();
+
+        var remainingProductsCount = Array.from(document.querySelectorAll(S.productItem)).length
+        var message = '최근 본 상품 %s개를 삭제할까요?'.replace('%s', remainingProductsCount)
+        var modalContent = '<div class="recent-viewed-products__deletion_modal">'
+            + '<div class="recent-viewed-products__deletion_modal_contents">' + message + '</div>'
+            + '<div class="recent-viewed-products__deletion_modal_ctas"><button class="cta_cancel">취소</button> <button class="cta_confirm primary">삭제</button></div>'
+            + '</div>'
+
+        deletionAllMountingNode = document.createElement('div')
+        deletionAllMountingNode.id = 'recent-viewed-products__deletion_modal_container'
+
+        var maskNode = document.createElement('div')
+        maskNode.className = 'recent-viewed-products__confirm_mask'
+        maskNode.style.top = 0
+
+        deletionAllMountingNode.innerHTML = modalContent
+        deletionAllMountingNode.insertBefore(maskNode, deletionAllMountingNode.firstElementChild)
+        document.body.appendChild(deletionAllMountingNode)
+        disableBodyScroll(true);
+
+        var ctas = document.querySelector('.recent-viewed-products__deletion_modal_ctas')
+        if (!ctas) return;
+
+
+        bindEvent(ctas.querySelector('.cta_cancel'), function() {
+            onCancel(closeDeletionConfirmModal)
+        })
+        bindEvent(ctas.querySelector('.cta_confirm'), function() {
+            onConfirm(closeDeletionConfirmModal)
+        })
+
+        function bindEvent(target, cb) {
+            target && target.addEventListener('click', cb)
+        }
+    }
+
+
+    function closeDeletionConfirmModal() {
+        if (!deletionAllMountingNode) return;
+
+        document.body.removeChild(deletionAllMountingNode)
+        deletionAllMountingNode = null
+        disableBodyScroll(false)
+
+        $(S.maskNode).show()
+
+    }
+
+
+    // start: init controller
+
+    attach();
+})
+

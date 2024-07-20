@@ -1,0 +1,102 @@
+/* eslint-disable prefer-template */
+/* eslint-disable vars-on-top */
+/* eslint-disable no-var */
+/* eslint-disable object-shorthand */
+define(['jquery', 'weblog', '../../../lib/mutation-observer/mutation-observer.min'], function ($, CoupangWebLog, MutationObserver) {
+
+  function insertUserName(_text) {
+    var username = _text || '';
+    if (username.length > 6) {
+      username = username.slice(0, 6) + '...';
+    }
+    $('.my-coupang.logged-in .my-coupang-username').text(username);
+  }
+
+  function GnbMyCoupangIcon() {
+    this.init();
+  }
+
+  GnbMyCoupangIcon.prototype = {
+    init: function () {
+      this.initUserName();
+      this.initSignInUrl();
+      this.initWeblog();
+      this.bindClickEvents();
+    },
+
+    initUserName: function () {
+      var $link = $('#myCoupang > a');
+      var $username = $('#myCoupang > a strong');
+      if (!$username || !$username.length) return;
+      var username = $username.html() || '';
+      if (!username.length && MutationObserver) {
+        var observer = new MutationObserver(function (entries) {
+          if (!entries || !entries.length) return;
+          var usernameText = $(entries[0].target).find('strong').text();
+          insertUserName(usernameText);
+          observer.disconnect();
+          observer = null;
+        });
+        observer.observe($link.get(0), { childList: true });
+      } else {
+        insertUserName(username);
+      }
+    },
+
+    initSignInUrl: function () {
+      // do the same thing as loginUrlHandler.js
+      var $loginLink = $('#sign-in-link');
+      var $loginBtn = $('#sign-in-btn');
+      var $logout = $('#sign-out-link');
+      var rtnUrl = encodeURIComponent(encodeURIComponent(document.URL));
+      $loginLink.attr('href', $loginLink.attr('href') + rtnUrl);
+      $loginBtn.attr('href', $loginBtn.attr('href') + rtnUrl);
+      $logout.attr('href', $logout.attr('href') + rtnUrl);
+    },
+
+    initWeblog: function () {
+      if (window.CoupangWebLog) return;
+      var reference = $('body').data('reference');
+      var mode = !reference || !reference.profile || reference.profile === 'production' ? 'production' : 'test';
+      CoupangWebLog.init({
+        platform: 'web',
+        service: 'coupang',
+        mode: mode,
+        useAutoSendPageViewLog: false
+      });
+    },
+
+    bindClickEvents: function () {
+      var DATA_SELECTOR = 'data-gnb-menu-log';
+      var needLogElements = $('.signInIntoMyCoupang').find('[' + DATA_SELECTOR + ']');
+      var that = this;
+      if (!needLogElements || !needLogElements.length) return;
+      needLogElements.on('click', function (e) {
+        try {
+          var props = $(e.currentTarget).attr(DATA_SELECTOR) || '{}';
+          that._submitClickLog($.parseJSON(props));
+        } catch (err) {
+          console.log(err);
+        }
+      });
+    },
+
+    _submitClickLog: function (param) {
+      var _param = param || {};
+      window.CoupangWebLog && window.CoupangWebLog.submit({
+        meta: { schemaId: 1173, schemaVersion: 2 },
+        data: {
+            domain: 'gnb',
+            pageName: 'gnb',
+            eventName: 'click_gnb_dropdown_menu',
+            logCategory: 'event',
+            logType: 'click',
+            eventGroup: _param.eventGroup,
+            targetLabel: _param.targetLabel,
+        }
+      });
+    },
+  };
+
+  return GnbMyCoupangIcon;
+});

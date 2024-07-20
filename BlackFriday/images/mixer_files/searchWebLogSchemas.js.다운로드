@@ -1,0 +1,625 @@
+define(function () {
+    "use strict";
+
+    var LOG_PARAMS = {
+        SRPRESULT: {
+            meta: { schemaId: 116, schemaVersion: 11 },
+            data: {
+                "q": "",
+                "channel": "",
+                "filterKeys": "",
+                "searchViewType": null,
+                "searchId": "",
+                "searchCount": null,
+                "isLoyaltyMember": false
+            }
+        },
+        SRPRANKING: {
+            meta: { schemaId: 152, schemaVersion: 2 },
+            data: {
+                "eventName": "impression_ranking",
+                "domainType": "SRP",
+                "searchId": ""
+            }
+        },
+        SRPNORESULT: {
+            meta: { schemaId: 127, schemaVersion: 2 },
+            data: {
+                "logCategory": "impression",
+                "logType": "impression",
+                "eventName": "search_no_result",
+                "q": "",
+                "filterCount": null,
+                "filterKey": "",
+                "type": null,
+                "searchId": "",
+                "channel": ""
+            }
+        },
+        SEARCHNOHIT: {
+            meta: { schemaId: 125, schemaVersion: 2 },
+            data: {
+                "eventName": "search_no_hit_view",
+                "q": "",
+                "qc": "",
+                "type": ""
+            }
+        },
+        SEARCHNOHITRCMD: {
+            meta: { schemaId: 126, schemaVersion: 2 },
+            data: {
+                "eventName": "click_search_rcmd_keyword",
+                "q": "",
+                "qc": "",
+                "type": ""
+            }
+        },
+        BESTSELLERWIDGET: {
+            meta: { schemaId: 7170, schemaVersion: 2 },
+            data: {
+                "eventName": "sdw_impression",
+            }
+        },
+        BESTSELLERWIDGETCLICK: {
+            meta: { schemaId: 7171, schemaVersion: 2 },
+            data: {
+                "eventName": "sdw_item_click",
+            }
+        },
+        SEARCHLKMRLIST: {
+            meta: { schemaId: 129, schemaVersion: 2 },
+            data: {
+                "eventName": "search_small_hit_view",
+                "q": "",
+                "qc": "",
+                "searchId": "",
+                "type": ""
+            }
+        },
+        SEARCHLKMR: {
+            meta: { schemaId: 130, schemaVersion: 2 },
+            data: {
+                "eventName": "click_search_small_hit_more",
+                "q": "",
+                "qc": "",
+                "searchId": "",
+                "type": ""
+            }
+        },
+        PRODUCT: {
+            meta: { schemaId: 124, schemaVersion: 27 },
+            data: {
+                "eventName": "click_search_product",
+                "q": "",
+                "searchCount": 0,
+                "searchId": "",
+                "productId": "",
+                "itemId": "",
+                "itemProductId": "",
+                "vendorItemId": "",
+                "rank": 0,
+                "filterKey": "",
+                "invalid": "",
+                "searchType": null,
+                "bestSellerBadge": null,
+                "sponsored": null,
+                "page": "",
+                "listSize": "",
+                "isAutoSelected": false,
+                "isInvalid": "",
+                "isCcidEligible": false,
+                "displayCcidBadge": false,
+                "snsDiscountRate": 0,
+                "wowOnlyInstantDiscountRate": 0,
+                "isLoyaltyMember": false,
+                "sortIsChecked": false,
+            }
+        },
+        FILTER: {
+            meta: { schemaId: 77, schemaVersion: 2 },
+            data: {
+                "domain": "list",
+                "pageName": "list",
+                "eventName": "click_search_filter_sliding",
+                "q": "",
+                "filterType": "",
+                "filterValue": null,
+                "actionType": "",
+                "domainType": null,
+                "brandName": null,
+                "id": "",
+                "depth": ""
+            }
+        },
+        FILTEREXPOSE: {
+            meta: { schemaId: 83, schemaVersion: 3 },
+            data: {
+                "domain": "list",
+                "pageName": "list",
+                "eventName": "filter_expose",
+                "searchId": "",
+                "q": "",
+                "attributeId": "",
+                "service": "",
+                "filterTypes": "",
+                "actionType": "",
+                "category": "",
+                "brand": "",
+                "attribute": ""
+            }
+        },
+        FILTERRESET: {
+            meta: { schemaId: 1211, schemaVersion: 2 },
+            data: {
+                "eventName": "click_search_filter_reset",
+                "filterKey": "",
+                "q": ""
+            }
+        },
+        LISTSIZE: {
+            meta: { schemaId: 1210, schemaVersion: 2 },
+            data: {
+                "eventName": "click_search_filter_listsize",
+                "listSize": null,
+                "q": ""
+            }
+        },
+        ALLCATEGORY: {
+            meta: { schemaId: 1236, schemaVersion: 1 },
+            data: {
+                "eventName": "click_filter_group_all_filter_link",
+                "type": "initialize",
+                "q": ""
+            }
+        },
+        MORECATEGORY: {
+            meta: { schemaId: 1209, schemaVersion: 1 },
+            data: {
+                "eventName": "click_search_filter_category_seemore",
+                "q": "",
+                "depth": ""
+            }
+        },
+        RELATEDKEYWORD: {
+            meta: {schemaId: 131, schemaVersion: 2},
+            data: {
+                "eventName": "click_search_related_keyword",
+                "q": "",
+                "prevQuery": null,
+                "qc": ""
+            }
+        },
+        // RELATEDKEYWORDNORESULT: "/click_search_related_keyword_noresult",
+        // HOTKEYWORDNORESULT: "/click_search_hot_keyword_noresult",
+        PAGINATION: {
+            meta: { schemaId: 1203, schemaVersion: 1 },
+            data: {
+                "eventName": "click_search_pagination",
+                "q": "",
+                "page": ""
+            }
+        },
+        CONTEXTUALMENU: {
+            meta: { schemaId: 151, schemaVersion: 2 },
+            data: {
+                "eventName": "contextual_menu",
+                "q": "",
+                "actionType": null,
+                "type": null,
+                "itemId": "",
+                "productId": "",
+                "coupangSrl": null
+            }
+        },
+        FEEDBACK: {
+            meta: { schemaId: 136, schemaVersion: 2 },
+            data: {
+                "eventName": "search_feedback",
+                "q": "",
+                "searchId": "",
+                "type": null,
+                "filterType": "",
+                "channel": ""
+            },
+        },
+        // FEEDBACKLIKE: "/search_feedback_like_button",
+        FEEDBACKLIKE: {
+            meta: { schemaId: 138, schemaVersion: 2 },
+            data: {
+                "eventName": "click_feedback_like_button",
+                "q": "",
+                "searchId": "",
+                "type": null,
+                "filterType": "",
+                "channel": ""
+            }
+        },
+        // FEEDBACKDISLIKE: "search_feedback_dislike_button",
+        FEEDBACKDISLIKE: {
+            meta: { schemaId: 139, schemaVersion: 2 },
+            data: {
+                "eventName": "click_feedback_dislike_button",
+                "q": "",
+                "searchId": "",
+                "type": null,
+                "itemIndex": null,
+                "filterType": "",
+                "channel": ""
+            },
+        },
+        // FEEDBACKDISLIKE: "search_feedback_reset_button",
+        FEEDBACKRESET: {
+            meta: { schemaId: 1204, schemaVersion: 1 },
+            data: {
+                "eventName": "click_feedback_reset_button",
+                "q": "",
+                "searchId": "",
+                "relatedKeyword": "",
+                "filterKey": "",
+                "feedback": ""
+            }
+        },
+        // SEARCHTOPBANNER: "/search_top_banner",
+        SEARCHTOPBANNER : {
+
+            meta: { "schemaId": 1335, "schemaVersion": 3 },
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "eventName": "search_top_banner",
+                "q": "",
+                "searchId": "",
+                "filterKey": "",
+                "channel": ""
+            }
+        },
+        // SEARCHTOPBANNER: "/search_top_banner",
+        CLICK_SEARCHTOPBANNER : {
+            meta: { "schemaId": 1336, "schemaVersion": 2 },
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "eventName": "search_top_banner",
+                "q": "",
+                "searchId": "",
+                "filterKey": "",
+                "channel": ""
+            }
+        },
+
+        //merchandising widget
+        MERCHANDISING_WIDGET: {
+            meta: {"schemaId": 2083, "schemaVersion": 2},
+            data: {
+                "domain": "srp",
+                // "logCategory": "impression",
+                // "logType": "impression",
+                "pageName": "srp",
+                "eventName": "srpmerchwidget"
+            }
+        },
+
+        CLICK_MERCHANDISING_ITEM: {
+            meta: {"schemaId": 2084, "schemaVersion": 2},
+            data: {
+                "domain": "srp",
+                "pageName": 'srp',
+                "eventName": 'srpmerchwidget'
+            }
+        },
+
+        SRP_AUTOCOMPLETE_TTI: {
+            meta: {"schemaId": 137, "schemaVersion": 3},
+            data: {
+                "domain": "tti",
+                "pageName": "srp_autocomplete",
+                "async": true,
+                "eventName": "tti-logger",
+                "platformType": "browser",
+                "logType": "performance",
+                "logCategory": "system",
+            }
+        },
+
+
+        SRP_AUTOCOMPLETE_CLICK: {
+            meta: {"schemaId": 118, "schemaVersion": 3},
+            data: {
+                "domain": "srp",
+                "logCategory": "event",
+                "logType": "click",
+                "pageName": "srp",
+                "eventName": "click_search_autocomplete_keyword"
+            }
+        },
+
+        SRP_SEARCH_BUTTON_CLICK_V4: {
+            meta: {"schemaId": 120, "schemaVersion": 4},
+            data: {
+                "domain": "srp",
+                "logCategory": "event",
+                "logType": "click",
+                "pageName": "srp",
+                "eventName": "click_search_list",
+                "channel": "user"
+            }
+        },
+
+        SRP_HISTORY_CLICK: {
+            meta: {"schemaId": 115, "schemaVersion": 1},
+            data: {
+                "domain": "srp",
+                "logCategory": "event",
+                "logType": "click",
+                "pageName": "srp",
+                "eventName": "click_search_recent_keyword"
+            }
+        },
+
+        SEARCHTIMELOG: {
+            meta: {"schemaId": 2317, "schemaVersion": 2},
+            data: {
+                "domain": "srp",
+                "logCategory": "etc",
+                "logType": "latency",
+                "eventName": "web_latency_track_log",
+            }
+        },
+
+        SRP_GUIDED_SEARCH_IMPRESSION: {
+            meta: { "schemaId": 332, "schemaVersion": 3 },
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "eventName": "srp_guided_search_expose"
+            }
+        },
+
+        SRP_GUIDED_SEARCH_ITEM_CLICK: {
+            meta: {"schemaId": 333, "schemaVersion": 2},
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "eventName": "click_srp_guided_keyword"
+            }
+        },
+
+        SRP_ADS_IMPRESSION: {
+            meta: {"schemaId": 2851, "schemaVersion": 2},
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "logCategory": "impression",
+                "logType": "impression",
+                "eventName": "srp_ads_impression"
+            }
+        },
+
+        SRP_ADS_CLICK: {
+            meta: {"schemaId": 2945, "schemaVersion": 4},
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "logCategory": "event",
+                "logType": "click",
+                "eventName": "srp_ads_click"
+            }
+        },
+
+        SRP_TOP_BANNER_ADS_IMPRESSION: {
+            meta: {"schemaId": 1335, "schemaVersion": 5},
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "logCategory": "impression",
+                "logType": "impression",
+                "eventName": "attr_srp_top_banner_ads"
+            }
+        },
+
+        SRP_TOP_BANNER_ADS_CLICK: {
+            meta: {"schemaId": 1336, "schemaVersion": 4},
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "logCategory": "event",
+                "logType": "click",
+                "eventName": "attr_srp_top_banner_ads"
+            }
+        },
+
+        SRP_BOTTOM_CAROUSEL_IMPRESSION: {
+            meta: {"schemaId": 2958, "schemaVersion": 1},
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "logCategory": "impression",
+                "logType": "impression",
+                "eventName": "srp_bottom_carousel_impression"
+            }
+        },
+
+        SRP_BOTTOM_CAROUSEL_CLICK: {
+            meta: {"schemaId": 2959, "schemaVersion": 1},
+            data: {
+                "domain": "srp",
+                "pageName": "srp",
+                "logCategory": "event",
+                "logType": "click",
+                "eventName": "srp_bottom_carousel_click"
+            }
+        },
+
+        SRP_WOW_NUDGE_IMPRESSION: {
+            meta: {"schemaId": 4142, "schemaVersion": 1},
+            data: {
+                'domain': 'srp',
+                'logCategory': 'impression',
+                'logType': 'impression',
+                'pageName': 'srp',
+                'eventName': 'impression_wow_nudge',
+                'nudgeType': 'BANNER',
+                'benefitType': '',
+                'isLoyaltyMember': false
+            }
+        },
+
+        SRP_WOW_NUDGE_CLICK: {
+            meta: {"schemaId": 4143, "schemaVersion": 1},
+            data: {
+                'domain': 'srp',
+                'logCategory': 'impression',
+                'logType': 'impression',
+                'pageName': 'srp',
+                'eventName': 'click_wow_nudge',
+                'nudgeType': 'BANNER',
+                'benefitType': '',
+                'isLoyaltyMember': false
+            }
+        },
+
+        LOYALTY_REGISTRATION_COMPLETE_IMPRESS: {
+            'meta': { 'schemaId': 1682, 'schemaVersion': 5 },
+            'data': {
+                'domain': 'loyalty',
+                'logCategory': 'impression',
+                'logType': 'impression',
+                'pageName': 'sign_up_intro',
+                'eventName': 'impression_registration_complete',
+                'pageCategory': 'LOYALTY_LANDING',
+                'source': 'SRP',
+                'landingType': 'landingPage1',
+                'benefitType': ''
+            }
+        },
+
+        OMP_SRP_WIDGET_IMPRESS: {
+            'meta': { 'schemaId': 2083, 'schemaVersion': 5 },
+            'data': {
+                'domain': 'srp',
+                'logCategory': 'impression',
+                'logType': 'impression',
+                'pageName': 'srp',
+                'eventName': 'SRP_PROMOTION',
+                'widgetTitle': 'SRP_Carousel_1'
+            }
+        },
+
+        OMP_SRP_WIDGET_CLICK: {
+            'meta': { 'schemaId': 2084, 'schemaVersion': 6 },
+            'data': {
+                'domain': 'srp',
+                'logCategory': 'event',
+                'logType': 'click',
+                'pageName': 'srp',
+                'eventName': 'SRP_PROMOTION',
+                'widgetTitle': 'SRP_Carousel_1'
+            }
+        },
+
+        SRP_SEE_WOW_PRICE_IMPRESSION: {
+            meta: { schemaId: 10430, schemaVersion: 1 },
+            data: {
+                domain: 'srp',
+                logCategory: 'impression',
+                logType: 'impression',
+                pageName: 'srp',
+                eventName: 'srp_see_wow_price_impression',
+            }
+        },
+        SRP_SEE_WOW_PRICE_CLICK: {
+            meta: { schemaId: 10431, schemaVersion: 1 },
+            data: {
+                domain: 'srp',
+                logCategory: 'event',
+                logType: 'click',
+                pageName: 'srp',
+                eventName: 'srp_see_wow_price_click',
+            }
+        },
+
+        SRP_PRODUCT_UNIT_ITEM_IMPRESSION: {
+            meta: { schemaId: 3723, schemaVersion: 7 },
+            data: {
+                "logCategory": "impression",
+                "logType": "impression",
+                "domain": "srp",
+                "eventName": "impression_product_unit_item",
+                "pageName": "srp",
+                "query": "",
+                "searchId": "",
+                "values": "",
+            }
+        },
+
+        SRP_WELCOME_BACK_NUDGE_IMPRESSION: {
+            meta: { schemaId: 11333, schemaVersion: 1 },
+            data: {
+                "logCategory": "impression",
+                "logType": "impression",
+                "domain": "srp",
+                "eventName": "srp_lapse_customer_coupon_tooltip_impression",
+                "pageName": "srp",
+            }
+        },
+
+        SRP_WELCOME_BACK_NUDGE_CLICK: {
+            meta: { schemaId: 11334, schemaVersion: 1 },
+            data: {
+                "logCategory": "event",
+                "logType": "click",
+                "domain": "srp",
+                "eventName": "srp_lapse_customer_coupon_tooltip_click",
+                "pageName": "srp",
+            }
+        },
+        SRP_SDWAGING_LOAD_IMPRESSION: {
+            meta: { schemaId : 12828, schemaVersion: 1},
+            data: {
+                "logCategory": "impression",
+                "logType": "impression",
+                "domain": "srp",
+                "eventName": "sdw_load_impression",
+                "pageName": "srp",
+            }
+        },
+        SRP_SDWAGING_EXPOSURE_IMPRESSION: {
+            meta: { schemaId : 3113, schemaVersion: 25},
+            data: {
+                "logCategory": "impression",
+                "logType": "impression",
+                "domain": "srp",
+                "eventName": "sdw_impression",
+                "pageName": "srp",
+            }
+        },
+        SRP_SDWAGING_ITEM_CLICK: {
+            meta: { schemaId : 3114, schemaVersion: 19},
+            data: {
+                "logCategory": "event",
+                "logType": "click",
+                "domain": "srp",
+                "eventName": "sdw_item_click",
+                "pageName": "srp",
+            }
+        },
+        // send this log not depends on ab group.
+        ABTEST_EXPOSURE_TRACKER_LOG_IMPRESSION: {
+            meta: { schemaId : 12806, schemaVersion: 1},
+            data: {
+                "logCategory": "impression",
+                "logType": "impression",
+                "domain": "srp",
+                "eventName": "abtest_exposure_tracker_log_impression",
+                "pageName": "srp",
+                "featureName": "SDW_AGING_PRODUCTS_WIDGET_PC",
+            }
+        },
+
+    };
+
+    return {
+        LOG_PARAMS : LOG_PARAMS
+    };
+
+});

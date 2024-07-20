@@ -1,0 +1,134 @@
+define(["jquery", "common/utils/cookieUtils"], function ($, cookieUtil) {
+    "use strict";
+
+    var getDate = function () {
+        var today = new Date()
+        var year = today.getFullYear()
+        var month = today.getMonth() + 1
+        var date = today.getDate()
+        if (month < 10) month = '0' + month
+        if (date < 10) date = '0' + date
+        return year + '-' + month + '-' + date
+    }
+
+    var fbiEntrance = function () {
+        this.fbiEligibleLastStatus = $("#header").data("fbiEligibleLastStatus");
+        this.fbiMenuItemUrl = "https://www.coupang.com/np/fbi?sourceType=home_section_fbi";
+        this.fbiNewBadgeMaxTime = 30 * 24 * 3600 * 1000;
+        this.init();
+    };
+    var newbadgeKey = "newbadge_first_show_time";
+    fbiEntrance.prototype = {
+        init: function () {
+            this.showFbiTooltip();
+            this.initFbiMyCoupangMenuNewBadge();
+            this.initGnbNewBadge();
+        },
+        initFbiMyCoupangMenuNewBadge: function () {
+            var newBadgeStart = localStorage.getItem(newbadgeKey);
+            if (!newBadgeStart) {
+                newBadgeStart = new Date().getTime();
+                localStorage.setItem(newbadgeKey, newBadgeStart)
+            }
+            var offset = new Date().getTime() - parseInt(newBadgeStart);
+            // month
+            if (offset <= this.fbiNewBadgeMaxTime) {
+                $(".menu-flex-item .new-badge").show();
+            }
+        },
+        initGnbNewBadge: function () {
+            var newBadgeStart = localStorage.getItem(newbadgeKey);
+            var newBadgeList = $('.ic-new-exposure');
+            var newBadgeListExcept = $('.ic-new').not("[class='ic-new ic-new-exposure']")
+            var onlyShow = false
+            newBadgeList.each(function () {
+                if (!newBadgeStart) {
+                    newBadgeStart = new Date().getTime();
+                    localStorage.setItem(newbadgeKey, newBadgeStart);
+                }
+                var offset = new Date().getTime() - newBadgeStart;
+                if (offset <= $(this).data('new-tag-exposure-mills')) {
+                    onlyShow = true
+                    $(this).show();
+                }
+            });
+            // if (onlyShow) {
+            //     newBadgeListExcept.each(function () {
+            //         $(this).hide();
+            //     })
+            // }
+        },
+        showFbiTooltip: function () {
+            var gnbTooltipDate = localStorage.getItem('gnb_tooltip_date')
+            var shownDateArray = gnbTooltipDate ? gnbTooltipDate.split(',') : []
+            var today = getDate()
+            if (!this.fbiEligibleLastStatus) return
+            if (shownDateArray.length > 2) return
+            if (shownDateArray.indexOf(today) > -1) {
+                return;
+            }
+            localStorage.setItem('gnb_tooltip_date', shownDateArray.concat(today).join(','))
+            var fbiMenuItem = $(
+                "#gnb-menu-container ul li a[href='" +
+                this.fbiMenuItemUrl +
+                "']"
+            );
+            if (!fbiMenuItem || !fbiMenuItem.length) return;
+            this.showTooltip(fbiMenuItem);
+        },
+        showTooltip: function (itemContanier) {
+            if (!itemContanier || !itemContanier.length) return;
+            var header = $("#header");
+            if (!header || !header.length) return;
+            var content = Pacifik.formatMessage(
+                "coupang.web.fbi.tooltip.content",
+                "재구매할 시간!"
+            );
+            var tooltipDom = $(
+                '<div class="gnb-tooltip">' +
+                '<div class="gnb-tooltip-arrow"></div>' +
+                "<span>" +
+                content +
+                "</span>" +
+                "</div>"
+            );
+            var updateTooltipSize = function () {
+                var x = itemContanier.offset().left;
+                var y = itemContanier.offset().top;
+                var width = itemContanier.width();
+                var height = itemContanier.height();
+                var parentX = header.offset().left;
+                var parentY = header.offset().top;
+                var targetTop = y + height - parentY + 6;
+                var targetLeft = x + width / 2 - parentX;
+                var currentTop = tooltipDom.data("top");
+                var currentLeft = tooltipDom.data("left");
+                if (targetTop === currentTop && targetLeft === currentLeft) {
+                    return;
+                }
+                tooltipDom.data("top", targetTop);
+                tooltipDom.data("left", targetLeft);
+                tooltipDom.css({
+                    top: targetTop + "px",
+                    left: targetLeft + "px",
+                });
+                setTimeout(function () {
+                    updateTooltipSize();
+                }, 30);
+            };
+            updateTooltipSize();
+            header.append(tooltipDom);
+            var menuOffsetBtn = $(".gnb-menu-btn");
+            $(window).on("resize", function () {
+                updateTooltipSize();
+            });
+            menuOffsetBtn.on("click", function () {
+                setTimeout(function () {
+                    updateTooltipSize();
+                }, 100);
+            });
+        },
+    };
+
+    return fbiEntrance;
+});

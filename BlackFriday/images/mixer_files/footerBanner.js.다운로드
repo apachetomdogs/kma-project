@@ -1,0 +1,231 @@
+define([
+    'jquery'
+    , 'common/utils/cookieUtils'
+    , 'weblog'
+    , 'common/essentialData'
+], function ($, cookieUtils, CoupangWebLog, essentialData) {
+    "use strict";
+
+    var SUPPORT_CONTROLLER_LIST = ['home', 'newcx', 'search', 'sdp-webpack', 'rocket', 'global', 'subscription'];
+
+
+    var SUPPORT_CONTROLLER_LIST = [
+        { 'controller': 'home', 'pageName': 'gateway' }
+        , { 'controller': 'search', 'pageName': 'srp' }
+        , { 'controller': 'sdp-webpack', 'pageName': 'sdp' }
+        , { 'controller': 'newcx', 'pageName': 'plp' }
+        , { 'controller': 'rocket', 'pageName': 'plp' }
+        , { 'controller': 'global', 'pageName': 'plp' }
+        , { 'controller': 'subscription', 'pageName': 'plp' }
+    ];
+
+    var footerBannerWebLogMeta = {
+        impression : {
+            "data": {
+                "domain": "marketing",
+                "logCategory": "impression",
+                "logType": "impression",
+                "pageName": "promotion",
+                "eventName": "sign_up_promotion_floating_banner_expose",
+                "location": ""
+            },
+            "meta": {
+                "schemaId": 1825,
+                "schemaVersion": 1
+            }
+        },
+        click_close :{
+            "data": {
+                "domain": "marketing",
+                "logCategory": "event",
+                "logType": "click",
+                "pageName": "promotion",
+                "eventName": "click_sign_up_promotion_floating_banner_close",
+                "location": ""
+            },
+            "meta": {
+                "schemaId": 1826,
+                "schemaVersion": 1
+            }
+        },
+        click_link : {
+            "data": {
+                "domain": "marketing",
+                "logCategory": "event",
+                "logType": "click",
+                "pageName": "promotion",
+                "eventName": "click_sign_up_promotion_floating_banner",
+                "location": ""
+            },
+            "meta": {
+                "schemaId": 1827,
+                "schemaVersion": 2
+            }
+        }
+    };
+
+    if (essentialData === 'undefined') { return; }
+
+
+    //----------------------temporary notice banner---------------------------//
+    try {
+        initNoticeBanner &&initNoticeBanner();
+    } catch(e) {}
+    //----------------------temporary notice banner end---------------------------//
+
+    var $domBody = $(document.body);
+    if ($domBody.has('#footer-banner').length < 1) { return; }
+
+    var controller = essentialData.getController();
+    var controllerData = findMatchedController(controller);
+    if (controllerData === null) { return; }
+
+    var $footerBannerWrapper = $('#footer-banner');
+    $footerBannerWrapper.on('click', 'a', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (this.name === 'footer-banner-message-link') {
+            clickedFooterBannerLink();
+        }
+        if (this.name === 'footer-banner-close-link') {
+            clickedFooterBannerClose();
+        }
+    });
+    $footerBannerWrapper.show();
+
+
+    var $window = $(window);
+
+    var $footer = $('#footer');
+    $window.on('scroll', function(e) {
+        if(!$footerBannerWrapper.is(':visible')){
+            return;
+        }
+        var currentBottom = $window.scrollTop() + $window.height();
+        var contentHeight = $domBody.height();
+        
+        if(currentBottom >= contentHeight){
+            $footerBannerWrapper.removeClass('footer-banner-floating');
+            $footer.css('margin-bottom', '0px');
+        } else {
+            $footer.css('margin-bottom', '44px');
+            $footerBannerWrapper.addClass('footer-banner-floating');
+        }
+    });
+
+    CoupangWebLog.init({
+        'platform': 'web',
+        'service': 'coupang',
+        'mode': essentialData.getProfile() === '' || essentialData.getProfile() === 'production' ? 'production' : 'test',
+        'useAutoSendPageViewLog': false
+    });
+
+    submitWebLog(footerBannerWebLogMeta.impression, {"location": controllerData.pageName});
+
+    if ($domBody.has('#product-list-paging').length > 0) {
+        $('#product-list-paging').css('bottom', '44px');
+    }
+
+    
+
+    function clickedFooterBannerLink() {
+        submitWebLog(footerBannerWebLogMeta.click_link, {"location": controllerData.pageName});
+        location.href = '/np/promotion/sign-up';
+    }
+
+    function clickedFooterBannerClose() {
+        cookieUtils.setCookie('hasTimeToCloseSignUpPromotionBanner', 'Y',{timeUnit: 'DAY', timeValue: 3});
+        $footerBannerWrapper.hide();
+
+        if ($domBody.has('#product-list-paging').length > 0) {
+            $('#product-list-paging').css('bottom', '0px');
+            $footer.css('margin-bottom', '0px');
+        }
+        submitWebLog(footerBannerWebLogMeta.click_close, {"location": controllerData.pageName});
+    }
+
+    function findMatchedController(controller){
+        if (typeof controller === 'undefined') {
+            return null;
+        }
+        if(controller === ''){
+            return null;
+        }
+        for (var i = 0; i < SUPPORT_CONTROLLER_LIST.length; i++) {
+            if(SUPPORT_CONTROLLER_LIST[i].controller === controller){
+                return SUPPORT_CONTROLLER_LIST[i];
+            }
+        }
+        return null;
+    }
+
+    function submitWebLog (webLogMeta, paramData){
+        if(typeof CoupangWebLog === 'undefined') { return false; }
+        webLogMeta.data = $.extend({}, webLogMeta.data, paramData);
+        CoupangWebLog.submit(webLogMeta);
+    }
+
+
+    //----------------------temporary notice banner ---------------------------//
+
+    function initNoticeBanner() {
+        var piiLog = {
+            impression: function() {
+                if(typeof CoupangWebLog === 'undefined') { return;}
+                CoupangWebLog.submit({
+                    data: {
+                        domain: 'home',
+                        logCategory: 'impression',
+                        logType: 'impression',
+                        pageName: 'home',
+                        eventName: 'impression_home_pii_noti',
+                    },
+                    meta: {
+                        schemaId: 7553,
+                        schemaVersion: 1
+                    }
+                });
+            },
+            click: function() {
+                if(typeof CoupangWebLog === 'undefined') { return;}
+                CoupangWebLog.submit({
+                    data: {
+                        domain: 'home',
+                        logCategory: 'event',
+                        logType: 'click',
+                        pageName: 'home',
+                        eventName: 'click_home_pii_noti',
+                    },
+                    meta: {
+                        schemaId: 7554,
+                        schemaVersion: 1
+                    }
+                })
+            }
+        };
+        var piicontainer = $('#homepiinoti');
+        if (piicontainer.length > 0) {
+            CoupangWebLog.init({
+                'platform': 'web',
+                'service': 'coupang',
+                'mode': essentialData.getProfile() === '' || essentialData.getProfile() === 'production' ? 'production' : 'test',
+                'useAutoSendPageViewLog': false
+            });
+            try {
+                piiLog.impression();
+                piicontainer.find('.footer-top__banner-notice-link').click(
+                    function () {
+                        piiLog.click();
+                    });
+
+            } catch(e) {
+                console.log(e);
+            }
+        }
+    }
+
+    //----------------------temporary notice banner end---------------------------//
+
+    return;
+});

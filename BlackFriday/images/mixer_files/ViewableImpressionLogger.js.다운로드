@@ -1,0 +1,233 @@
+define([
+	'jquery'
+], function($) {
+	var VIEWABLE_TIME = 1000;     // millisecond
+	var VIEWABLE_RATIO = 0.5;
+	var EXPOSABLE_RATIO = 0;
+
+	var ViewImpressionUrl = function(baseUrl) {
+		this.currentUrl = baseUrl;
+		this.needQuestionMark = baseUrl.indexOf('?') === -1;
+	};
+
+	ViewImpressionUrl.prototype.appendParameter = function (name, value) {
+		if (this.needQuestionMark) {
+			this.currentUrl += '?';
+			this.needQuestionMark = false;
+		} else {
+			this.currentUrl += '&';
+		}
+
+		this.currentUrl += name + '=' + value;
+	}
+
+	ViewImpressionUrl.prototype.appendParameters = function (parameters) {
+		parameters.forEach(function(parameter) {
+			this.appendParameter(parameter.name, parameter.value);
+		}.bind(this));
+	}
+
+	ViewImpressionUrl.prototype.getUrl = function() {
+		return this.currentUrl;
+	}
+
+	var ViewableImpressionLogger = function (element, loggingUrl) {
+		this.element = element;
+		this.exposeIO = null;
+		this.viewIO = null;
+		this.loggingUrl = loggingUrl;
+		this.isSent = false;
+		this.viewedTimer = null;
+		this.viewableData = {
+			exposedTime: 0,
+			viewedTime: 0,
+			exposedStartTime: undefined,
+			viewedStartTime: undefined,
+		};
+
+		this.init();
+	};
+
+	ViewableImpressionLogger.prototype = {
+		init: function() {
+			this.viewIO = new IntersectionObserver(function(entries) {
+				for (var ix = 0; ix < entries.length; ix++) {
+					this.checkViewableState(entries[ix]);
+				}
+			}.bind(this), { threshold: VIEWABLE_RATIO });
+
+			this.exposeIO = new IntersectionObserver(function(entries) {
+				for (var ix = 0; ix < entries.length; ix++) {
+					this.checkExposableState(entries[ix]);
+				}
+			}.bind(this), { threshold: EXPOSABLE_RATIO});
+
+			this.startLogging();
+
+			window.addEventListener('beforeunload', function() {
+				if (!this.isSent) {
+					this.stopLogging();
+					if (this.viewableData.exposedTime || this.viewableData.viewedTime) {
+						this.sendAdLog(this.getViewImpression(this.element, this.viewableData));
+					}
+				}
+			}.bind(this));
+			document.addEventListener('visibilitychange', function() {
+				if (document.visibilityState === 'hidden') {
+					this.stopLogging();
+				} else {
+					this.startLogging();
+				}
+			}.bind(this));
+		},
+		getLoggingUrl: function(element) {
+			var url;
+
+			if (this.loggingUrl) {
+				url = this.loggingUrl;
+			} else {
+				var logData = window.$(element).data('adsplatform') || {};
+				url = logData.viewImpression;
+			}
+
+			return url;
+		},
+		getViewImpression: function(element, metadata) {
+			var url = this.getLoggingUrl(element);
+			var vm;
+
+			if (url) {
+				vm = new ViewImpressionUrl(url);
+				vm.appendParameters([{
+					name: 'exposedTime',
+					value: metadata.exposedTime
+				}, {
+					name: 'viewedTime',
+					value: metadata.viewedTime
+				}]);
+				url = vm.getUrl();
+			}
+
+			return url;
+		},
+		calculateElapsedTime: function(duration, startTime) {
+			return startTime ? Math.min(duration + (Date.now() - startTime), VIEWABLE_TIME) : duration;
+		},
+		checkExposableState: function(entry) {
+			var isExposed = entry.isIntersecting;
+			var exposedTime = this.viewableData.exposedTime;
+			var exposedStartTime = this.viewableData.exposedStartTime;
+
+			// console.info('?? checkExposableState');
+			// console.info('?? entry', entry);
+			// console.info('?? exposedTime:', exposedTime);
+			// console.info('?? exposedStartTime:', exposedStartTime);
+
+			if (isExposed) {
+				if (exposedTime >= VIEWABLE_TIME) {
+					this.exposeIO.unobserve(entry.target);
+				}
+
+				if (!exposedStartTime) {
+					this.viewableData.exposedStartTime = Date.now();
+				}
+			} else {
+				this.viewableData.exposedStartTime = undefined;
+				this.viewableData.exposedTime = this.calculateElapsedTime(exposedTime, exposedStartTime);
+			}
+		},
+		checkViewableState: function(entry) {
+			var isViewed = entry.isIntersecting && entry.intersectionRatio >= VIEWABLE_RATIO;
+			var viewedTime = this.viewableData.viewedTime;
+			var viewedStartTime = this.viewableData.viewedStartTime;
+
+			// console.info('?? checkViewableState');
+			// console.info('?? entry', entry);
+			// console.info('?? viewedTime:', viewedTime);
+			// console.info('?? viewedStartTime:', viewedStartTime);
+
+			if (isViewed) {
+				if (viewedTime >= VIEWABLE_TIME) {
+					this.viewIO.unobserve(entry.target);
+				}
+
+				if (!this.viewedTimer) {
+					var remainingTime = VIEWABLE_TIME - viewedTime;
+					this.viewedTimer = setTimeout(function() {
+						this.stopLogging();
+						this.sendAdLog(this.getViewImpression(this.element, this.viewableData));
+
+						this.isSent = true;
+					}.bind(this), remainingTime);
+				}
+
+				if (!viewedStartTime) {
+					this.viewableData.viewedStartTime = Date.now();
+				}
+			} else {
+				if (this.viewedTimer) {
+					clearTimeout(this.viewedTimer);
+					this.viewedTimer = null;
+				}
+
+				this.viewableData.viewedStartTime = undefined;
+				this.viewableData.viewedTime = this.calculateElapsedTime(viewedTime, viewedStartTime);
+			}
+		},
+		startLogging: function() {
+			if (this.isSent) {
+				return;
+			}
+
+			if (this.viewIO) {
+				this.viewIO.observe(this.element);
+			}
+
+			if (this.exposeIO) {
+				this.exposeIO.observe(this.element);
+			}
+		},
+		stopLogging: function() {
+			if (this.isSent) {
+				return;
+			}
+
+			var viewableData = this.viewableData;
+
+			if (this.viewedTimer) {
+				clearTimeout(this.viewedTimer);
+				this.viewedTimer = null;
+			}
+
+			if (this.viewIO) {
+				this.viewIO.unobserve(this.element);
+			}
+
+			if (this.exposeIO) {
+				this.exposeIO.unobserve(this.element);
+			}
+
+			if (viewableData.exposedStartTime) {
+				viewableData.exposedTime = this.calculateElapsedTime(viewableData.exposedTime, viewableData.exposedStartTime);
+				viewableData.exposedStartTime = undefined;
+			}
+
+			if (viewableData.viewedStartTime) {
+				viewableData.viewedTime = this.calculateElapsedTime(viewableData.viewedTime, viewableData.viewedStartTime);
+				viewableData.viewedStartTime = undefined;
+			}
+		},
+		sendAdLog: function(url) {
+			if (!url) {
+				return;
+			}
+
+			// console.info('?? sendAdLog', url);
+
+			var adImage = new Image();
+			adImage.src = url;
+		}
+	};
+
+	return ViewableImpressionLogger;
+})
