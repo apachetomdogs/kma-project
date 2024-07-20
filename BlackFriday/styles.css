@@ -1,23 +1,30 @@
+/* 웹폰트 설정 */
 @font-face {
-    font-family: "Nanum Gothic";
-    src: url("fonts/NanumGothic.ttf") format("truetype");
+    font-family: 'GmarketSansMedium';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
 }
 
+/* 전체 페이지 스타일 */
 body {
-    font-family: 'Nanum Gothic', sans-serif; /* 'Nanum Gothic'으로 통일 */
+    font-family: 'GmarketSansMedium', sans-serif;
     background: linear-gradient(to bottom, #000, #777); /* 그라디언트 배경 */
     color: #fff;
     margin: 0;
     padding: 0;
 }
 
+/* 헤더 스타일 */
 header {
     text-align: center;
     padding: 2em 1em;
     background: linear-gradient(to bottom, #000, #222); /* 그라디언트 배경 */
     color: #ffd700;
+    position: relative;
 }
 
+/* 네비게이션 바 스타일 */
 .navbar {
     background: #222;
     padding: 0.5em 1em;
@@ -25,21 +32,29 @@ header {
 
 .nav-menu {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* 자동 줄 바꿈 */
     justify-content: center;
+    align-items: center; /* 항목들을 수직 중앙 정렬 */
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
 .nav-menu li {
-    margin: 0 10px;
+    display: flex;
+    align-items: center; /* 항목들 수직 중앙 정렬 */
+    margin: 0 10px; /* 좌우 간격 */
 }
 
 .nav-menu a {
     color: #ffd700;
     text-decoration: none;
     font-size: 1em;
+    line-height: 1.5; /* 줄 높이 설정 */
+    display: block; /* 링크를 블록 레벨로 설정하여 전체 영역을 클릭 가능하도록 함 */
+    padding: 0.5em; /* 패딩 추가 */
+    text-align: center; /* 텍스트 중앙 정렬 */
+    box-sizing: border-box; /* 패딩과 보더를 포함한 전체 너비 계산 */
 }
 
 .nav-menu a:hover {
@@ -59,11 +74,11 @@ header {
     outline: none;
     color: #000;
     font-size: 1em;
+    margin-right: 0.5em; /* 버튼과 입력창 사이 간격 */
 }
 
 .search-bar button {
     padding: 0.5em 1em;
-    margin-left: 0.5em;
     border: none;
     background: #ffd700;
     color: #000;
@@ -81,18 +96,28 @@ header h1 {
     margin: 0;
 }
 
+header h2 {
+    font-size: 1.5em;
+    margin: 0.5em 0;
+}
+
+header p {
+    font-size: 1em;
+}
+
+/* 상품 갤러리 스타일 */
 .product-gallery {
     display: flex;
-    flex-wrap: nowrap; /* 아이템들이 줄 바꿈 없이 한 줄에 배치되도록 설정 */
+    flex-wrap: wrap; /* 자동 줄 바꿈 */
     gap: 10px;
-    justify-content: space-between; /* 아이템 사이에 균등한 간격을 설정 */
+    justify-content: center; /* 중앙 정렬 */
     padding: 1em;
-    overflow-x: auto; /* 가로 스크롤을 가능하게 설정 */
+    margin: 0 auto;
+    max-width: 1200px; /* 최대 너비 설정 */
 }
 
 .product-item {
-    flex: 0 0 auto; /* 아이템이 고정된 너비로 유지되도록 설정 */
-    width: 18%; /* 너비를 적절히 조정하여 한 줄에 맞도록 설정 */
+    flex: 1 1 21%; /* 너비를 비율로 설정 */
     box-sizing: border-box;
     position: relative;
     background: #fff;
@@ -103,6 +128,7 @@ header h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin: 0 10px; /* 좌우 마진 조정 */
 }
 
 .product-img-container {
@@ -158,6 +184,7 @@ header h1 {
     color: #000;
 }
 
+/* 푸터 스타일 */
 footer {
     background-color: #000;
     color: #ffd700;
@@ -170,6 +197,7 @@ footer p {
     margin: 0;
 }
 
+/* 팝업창 스타일 */
 .popup {
     display: none;
     position: fixed;
@@ -221,93 +249,75 @@ footer p {
 }
 
 .heart-button img {
-    width: 25px; /* 하트 아이콘의 너비를 조정 */
-    height: 25px; /* 하트 아이콘의 높이를 조정 */
+    width: 14px; /* 하트 아이콘의 너비를 조정 */
+    height: 14px; /* 하트 아이콘의 높이를 조정 */
 }
 
 .heart-button:hover {
     background: #ffd700;
 }
 
-.special-sale-container {
+/* 네비게이션 바 스타일 */
+.navbar {
+    background: #222;
+    padding: 0.5em 1em;
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
+}
+
+.nav-menu {
+    display: flex;
     flex-wrap: wrap;
-    gap: 20px;
-    padding: 20px;
-}
-
-.special-sale-box {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 1em;
-    width: 30%; /* 각 박스의 너비를 조정 */
-    box-sizing: border-box;
-    text-align: center;
-}
-
-.special-sale-box h2 {
-    font-size: 1.2em;
+    justify-content: center;
+    list-style: none;
+    padding: 0;
     margin: 0;
 }
 
-.special-sale-box p {
-    font-size: 1em;
-    margin: 0;
-}
-
-header {
-    text-align: center;
-    padding: 2em 1em;
-    background: linear-gradient(to bottom, #000, #222); /* 그라디언트 배경 */
-    color: #ffd700; /* 기본 텍스트 색상 설정 */
-}
-
-header h1,
-header h2,
-header p,
-header .special-sale-column p {
-    color: #fff; /* 하얀색으로 텍스트 색상 설정 */
-    margin: 0; /* 기본 여백 제거 */
-    padding: 0; /* 기본 패딩 제거 */
-}
-
-header h1 {
-    font-size: 3em;
-    color: #fff; /* 텍스트 색상 하얗게 설정 */
-    margin: 1em 0; /* 상단과 하단 여백을 설정 */
-    padding: 0; /* 패딩 제거 */
-}
-
-header h2 {
-    font-size: 2em;
-    margin-bottom: 0.5em; /* 상단과 하단 여백 조정 */
-}
-
-header p {
-    font-size: 1em;
-    margin-bottom: 0.5em; /* 상단과 하단 여백 조정 */
-}
-
-.special-sale-column {
+.nav-menu li {
+    margin: 0 10px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: 1em;
 }
 
-.special-sale-date,
-.special-sale-time,
-.special-sale-note {
-    margin-bottom: 0.5em; /* 문장 간의 간격 조정 */
+.nav-menu a {
+    color: #ffd700;
+    text-decoration: none;
+    font-size: 1em; /* 글자 크기 통일 */
+    text-align: center;
+    padding: 0.5em 0;
 }
 
-/* 선택적 스타일링 */
-.special-sale-date,
-.special-sale-time,
-.special-sale-note {
-    font-size: 1em;
-    line-height: 1.4; /* 행 간격 조정 */
+.nav-menu a:hover {
+    text-decoration: underline;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+}
+
+.search-bar input[type="text"] {
+    padding: 0.5em;
+    border: 1px solid #ffd700;
+    border-radius: 4px;
+    outline: none;
+    color: #000;
+    font-size: 1em; /* 글자 크기 통일 */
+}
+
+.search-bar button {
+    padding: 0.5em 1em;
+    margin-left: 0.5em;
+    border: none;
+    background: #ffd700;
+    color: #000;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1em; /* 글자 크기 통일 */
+}
+
+.search-bar button:hover {
+    background: #ffa500;
 }
